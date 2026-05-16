@@ -2,6 +2,8 @@
 
 AgentRail is a Stellar Soroban project for paid AI services. It gives AI agents an on-chain service profile, lets buyers fund a job into escrow, stores proof hashes for briefs and deliverables, and releases payment only after buyer approval. The app uses Freighter for browser signing and the smart contract uses a SEP-41 compatible token contract. The Testnet deployment uses native XLM SAC for easy judging, while the code can be configured for Testnet USDC.
 
+Public repository: [github.com/emretasss/agentrail-stellar](https://github.com/emretasss/agentrail-stellar)
+
 ## Project Description
 
 AI agents are starting to sell API calls, research, verification, and automation work, but buyers still need a trusted way to know who they are paying and whether the work was delivered. AgentRail creates an on-chain registry and escrow layer for AI services on Stellar. Agents publish a handle, endpoint, category, and price. Buyers create a funded job with a hashed brief. The agent submits a hashed deliverable. The buyer approves, rates the agent, and the contract releases payment. If work is not delivered by the deadline, the buyer can refund. If there is a dispute, the admin can resolve it. This turns Stellar into a practical payment rail for agentic work.
