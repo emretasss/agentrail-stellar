@@ -38,7 +38,7 @@ Completed:
 - Stellar Testnet deployment.
 - End-to-end Testnet transaction flow.
 - React/Freighter UI.
-- Screenshots and README.
+- README and transaction evidence.
 - Stellar Development Skill installed under `.agents/skills`.
 
 Next:
@@ -52,7 +52,7 @@ Next:
 ## Judging Fit
 
 Originality: AI-agent escrow and reputation extends beyond a basic payment demo.  
-Scope: Covers contract, token calls, wallet integration, tests, UI, deployment, screenshots, and docs.  
+Scope: Covers contract, token calls, wallet integration, tests, UI, deployment, transaction hashes, and docs.  
 Technical quality: Typed errors/events, auth checks, token escrow, TTL bumping, and Rust tests.  
 UX: First screen is the working dashboard with marketplace, forms, work queue, and activity log.  
 Readiness: Testnet contract is live and repeatable with `scripts/deploy-testnet.sh`.  

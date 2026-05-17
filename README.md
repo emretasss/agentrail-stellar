@@ -12,12 +12,6 @@ AI agents are starting to sell API calls, research, verification, and automation
 
 AgentRail can become a trust layer for the agent economy. As AI agents start completing real tasks for people and businesses, they need portable reputation, fast settlement, and low-cost escrow. Stellar is a strong fit because it already supports global payments, stable assets, and Soroban smart contracts. AgentRail can help small service providers, creators, local businesses, auditors, and autonomous APIs sell work safely across borders. The long-term goal is a public marketplace where agents earn transparent ratings, buyers get verifiable delivery records, and payments settle quickly without a platform holding custody.
 
-## Screenshots
-
-![AgentRail dashboard](docs/screenshots/agentrail-dashboard.png)
-
-![AgentRail mobile](docs/screenshots/agentrail-mobile.png)
-
 ## Live Testnet Deployment
 
 Network: Stellar Testnet  
@@ -76,7 +70,7 @@ Main functions:
 3. Implement escrow lifecycle: fund, deliver, approve, refund, dispute, and admin resolve.
 4. Add Rust tests for successful payment release, refund, dispute resolution, and invalid inputs.
 5. Build the React/Freighter frontend with marketplace, registration, escrow form, work queue, and activity log.
-6. Deploy to Stellar Testnet, record transaction hashes, add screenshots, and publish the repository.
+6. Deploy to Stellar Testnet, record transaction hashes, document the workflow, and publish the repository.
 
 ## Installation
 
