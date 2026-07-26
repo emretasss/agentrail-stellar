@@ -1,10 +1,12 @@
 import * as StellarSdk from "@stellar/stellar-sdk";
 import {
   getAddress,
+  getNetwork,
   isConnected,
   setAllowed,
   signTransaction,
 } from "@stellar/freighter-api";
+import type { TransactionStage } from "@/types/agentrail";
 
 const TESTNET_PASSPHRASE = "Test SDF Network ; September 2015";
 const DEPLOYED_TESTNET_CONTRACT =
@@ -25,7 +27,8 @@ export const stellarConfig = {
 
 export type WalletState = {
   address: string;
-  network?: string;
+  network: string;
+  networkPassphrase: string;
 };
 
 export type SubmitResult = {
@@ -36,6 +39,11 @@ export type SubmitResult = {
 
 type FreighterBoolean = boolean | { isConnected?: boolean; isAllowed?: boolean };
 type FreighterAddress = string | { address?: string; publicKey?: string };
+type FreighterNetwork = {
+  network?: string;
+  networkPassphrase?: string;
+  error?: unknown;
+};
 
 function unpackBoolean(result: FreighterBoolean): boolean {
   if (typeof result === "boolean") return result;
@@ -55,9 +63,18 @@ export async function connectFreighter(): Promise<WalletState> {
     throw new Error("Freighter extension is not available.");
   }
 
-  await setAllowed();
+  const permission = await setAllowed();
+  if ("error" in permission && permission.error) {
+    throw new Error("Freighter permission was not granted.");
+  }
   const address = unpackAddress((await getAddress()) as FreighterAddress);
-  return { address };
+  const network = (await getNetwork()) as FreighterNetwork;
+  validateWalletNetwork(network);
+  return {
+    address,
+    network: network.network ?? "TESTNET",
+    networkPassphrase: network.networkPassphrase ?? TESTNET_PASSPHRASE,
+  };
 }
 
 export async function checkFreighter(): Promise<WalletState | null> {
@@ -65,10 +82,34 @@ export async function checkFreighter(): Promise<WalletState | null> {
     const connected = unpackBoolean((await isConnected()) as FreighterBoolean);
     if (!connected) return null;
     const address = unpackAddress((await getAddress()) as FreighterAddress);
-    return { address };
+    const network = (await getNetwork()) as FreighterNetwork;
+    if (!network.networkPassphrase) return null;
+    return {
+      address,
+      network: network.network ?? "TESTNET",
+      networkPassphrase: network.networkPassphrase,
+    };
   } catch {
     return null;
   }
+}
+
+function validateWalletNetwork(network: FreighterNetwork) {
+  if (network.error) {
+    throw new Error("Freighter network could not be read.");
+  }
+  if (network.networkPassphrase !== stellarConfig.networkPassphrase) {
+    throw new Error(
+      `Switch Freighter to Stellar Testnet before signing. Current network: ${
+        network.network ?? "unknown"
+      }.`,
+    );
+  }
+}
+
+export async function assertFreighterNetwork() {
+  const network = (await getNetwork()) as FreighterNetwork;
+  validateWalletNetwork(network);
 }
 
 export function stroopsFromDecimal(input: string): bigint {
@@ -143,57 +184,95 @@ export async function submitAgentRailCall(
   source: string,
   functionName: string,
   args: StellarSdk.xdr.ScVal[],
+  onStage?: (stage: TransactionStage) => void,
 ): Promise<SubmitResult> {
   if (!stellarConfig.contractId) {
     throw new Error("Missing VITE_AGENTRAIL_CONTRACT_ID.");
   }
 
-  const server = new StellarSdk.rpc.Server(stellarConfig.rpcUrl);
-  const account = await server.getAccount(source);
-  const contract = new StellarSdk.Contract(stellarConfig.contractId);
-  const transaction = new StellarSdk.TransactionBuilder(account, {
-    fee: StellarSdk.BASE_FEE,
-    networkPassphrase: stellarConfig.networkPassphrase,
-  })
-    .addOperation(contract.call(functionName, ...args))
-    .setTimeout(30)
-    .build();
+  try {
+    await assertFreighterNetwork();
+    onStage?.("preparing");
 
-  const prepared = await server.prepareTransaction(transaction);
-  const signed = await signTransaction(
-    prepared.toEnvelope().toXDR("base64"),
-    {
+    const server = new StellarSdk.rpc.Server(stellarConfig.rpcUrl);
+    const account = await server.getAccount(source);
+    const contract = new StellarSdk.Contract(stellarConfig.contractId);
+    const transaction = new StellarSdk.TransactionBuilder(account, {
+      fee: StellarSdk.BASE_FEE,
       networkPassphrase: stellarConfig.networkPassphrase,
-      address: source,
-    },
-  );
+    })
+      .addOperation(contract.call(functionName, ...args))
+      .setTimeout(180)
+      .build();
 
-  if ("error" in signed && signed.error) {
-    throw new Error(signed.error);
+    const prepared = await server.prepareTransaction(transaction);
+    onStage?.("signing");
+    const signed = await signTransaction(
+      prepared.toEnvelope().toXDR("base64"),
+      {
+        networkPassphrase: stellarConfig.networkPassphrase,
+        address: source,
+      },
+    );
+
+    if ("error" in signed && signed.error) {
+      throw new Error(signed.error);
+    }
+
+    onStage?.("submitting");
+    const signedTransaction = StellarSdk.TransactionBuilder.fromXDR(
+      signed.signedTxXdr,
+      stellarConfig.networkPassphrase,
+    ) as StellarSdk.Transaction;
+    const submitted = await server.sendTransaction(signedTransaction);
+    if (submitted.status !== "PENDING") {
+      throw new Error(`RPC rejected transaction with status ${submitted.status}.`);
+    }
+
+    onStage?.("confirming");
+    let confirmed = await server.getTransaction(submitted.hash);
+    const confirmationDeadline = Date.now() + 60_000;
+    while (confirmed.status === "NOT_FOUND" && Date.now() < confirmationDeadline) {
+      await new Promise((resolve) => window.setTimeout(resolve, 1100));
+      confirmed = await server.getTransaction(submitted.hash);
+    }
+
+    if (confirmed.status !== "SUCCESS") {
+      if (confirmed.status === "NOT_FOUND") {
+        throw new Error(
+          `Confirmation timed out. Check transaction ${submitted.hash} in Stellar Expert.`,
+        );
+      }
+      throw new Error(`Transaction failed with status ${confirmed.status}.`);
+    }
+
+    onStage?.("success");
+    return {
+      hash: submitted.hash,
+      status: confirmed.status,
+      explorerUrl: `https://stellar.expert/explorer/testnet/tx/${submitted.hash}`,
+    };
+  } catch (error) {
+    onStage?.("error");
+    throw normalizeStellarError(error);
   }
+}
 
-  const signedTransaction = StellarSdk.TransactionBuilder.fromXDR(
-    signed.signedTxXdr,
-    stellarConfig.networkPassphrase,
-  ) as StellarSdk.Transaction;
-  const submitted = await server.sendTransaction(signedTransaction);
-  if (submitted.status !== "PENDING") {
-    throw new Error(`RPC rejected transaction with status ${submitted.status}.`);
+function normalizeStellarError(error: unknown): Error {
+  const message = error instanceof Error ? error.message : String(error);
+  const lower = message.toLowerCase();
+
+  if (lower.includes("user declined") || lower.includes("rejected")) {
+    return new Error("Signature request was cancelled. No transaction was submitted.");
   }
-
-  let confirmed = await server.getTransaction(submitted.hash);
-  while (confirmed.status === "NOT_FOUND") {
-    await new Promise((resolve) => window.setTimeout(resolve, 1100));
-    confirmed = await server.getTransaction(submitted.hash);
+  if (lower.includes("account not found") || lower.includes("404")) {
+    return new Error("This Testnet account is not funded yet. Fund it with Friendbot and retry.");
   }
-
-  if (confirmed.status !== "SUCCESS") {
-    throw new Error(`Transaction failed with status ${confirmed.status}.`);
+  if (lower.includes("insufficient") || lower.includes("underfunded")) {
+    return new Error("Insufficient Testnet XLM for this escrow and network fees.");
   }
-
-  return {
-    hash: submitted.hash,
-    status: confirmed.status,
-    explorerUrl: `https://stellar.expert/explorer/testnet/tx/${submitted.hash}`,
-  };
+  if (lower.includes("tx_bad_seq")) {
+    return new Error("Wallet sequence changed. Please retry with a fresh transaction.");
+  }
+  return error instanceof Error ? error : new Error("Unexpected Stellar transaction error.");
 }
