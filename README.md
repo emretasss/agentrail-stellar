@@ -4,6 +4,8 @@ AgentRail is a Stellar Soroban project for paid AI services. It gives AI agents 
 
 Public repository: [github.com/emretasss/agentrail-stellar](https://github.com/emretasss/agentrail-stellar)
 
+Production app: deployment URL is published from the current release.
+
 ## Project Description
 
 AI agents are starting to sell API calls, research, verification, and automation work, but buyers still need a trusted way to know who they are paying and whether the work was delivered. AgentRail creates an on-chain registry and escrow layer for AI services on Stellar. Agents publish a handle, endpoint, category, and price. Buyers create a funded job with a hashed brief. The agent submits a hashed deliverable. The buyer approves, rates the agent, and the contract releases payment. If work is not delivered by the deadline, the buyer can refund. If there is a dispute, the admin can resolve it. This turns Stellar into a practical payment rail for agentic work.
@@ -35,6 +37,8 @@ Payment released: [`eb5bb2163cc64882f8e800a7963adad9362ef1d48a6a30cbc0e699f21fcf
 
 ## Features
 
+- Professional, mobile-responsive dark interface built with shadcn/Radix primitives.
+- Guided onboarding and explicit transaction progress from simulation to finality.
 - Agent registry with owner authorization, handle, endpoint, category, active flag, price, earnings, completed jobs, and rating totals.
 - Escrow jobs funded through a SEP-41 token contract.
 - Proof hashes for buyer brief and agent deliverable.
@@ -44,6 +48,8 @@ Payment released: [`eb5bb2163cc64882f8e800a7963adad9362ef1d48a6a30cbc0e699f21fcf
 - Typed Soroban events for registry and job lifecycle.
 - Freighter-connected React UI with live Testnet contract support and demo fallback.
 - Local contract tests covering registration, escrow release, refunds, disputes, and invalid inputs.
+- Sentry-ready error monitoring, aggregate analytics, and product validation exports.
+- CI checks for frontend builds, dependency security, Rust formatting, contract tests, and optimized WASM.
 
 ## Smart Contract
 
@@ -61,6 +67,8 @@ Main functions:
 - `resolve_dispute(admin, job_id, release_to_agent) -> Job`
 - `list_agents() -> Vec<Agent>`
 - `list_jobs() -> Vec<Job>`
+- `list_agents_page(start, limit) -> Vec<Agent>`
+- `list_jobs_page(start, limit) -> Vec<Job>`
 - `stats() -> ProtocolStats`
 
 ## Development Plan
@@ -138,7 +146,20 @@ VITE_STELLAR_RPC_URL=https://soroban-testnet.stellar.org
 VITE_STELLAR_NETWORK_PASSPHRASE=Test SDF Network ; September 2015
 VITE_NATIVE_TOKEN_CONTRACT_ID=CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC
 VITE_TESTNET_USDC_CONTRACT_ID=CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA
+VITE_SENTRY_DSN=
+VITE_APP_VERSION=local
 ```
+
+## Level 4 Review
+
+- [Architecture](docs/ARCHITECTURE.md)
+- [Submission checklist and real-user evidence plan](docs/LEVEL4_SUBMISSION.md)
+- [Three-minute demo script](docs/DEMO_SCRIPT.md)
+
+The app records unique connected wallets, confirmed Testnet transaction hashes,
+and consented feedback locally. Use **Share feedback → Export validation
+evidence** after the real-user cohort. This mechanism prepares the evidence but
+does not fabricate the required 10 users.
 
 ## About Me
 

@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
-    "build": "tsc && vite build",
+    "build": "tsc && vite build && node scripts/prepare-sites.mjs",
+    "check": "tsc --noEmit && cargo test",
+    "audit": "npm audit --audit-level=high",
     "preview": "vite preview --host 0.0.0.0",
     "test:contracts": "cargo test",
     "build:contract": "stellar contract build --package agent-pay --optimize",
