@@ -1,12 +1,16 @@
 #![no_std]
 
 use soroban_sdk::{
-    contract, contracterror, contractevent, contractimpl, contracttype, symbol_short, token,
-    Address, BytesN, Env, MuxedAddress, String, Symbol, Vec,
+    contract, contracterror, contractevent, contractimpl, contractmeta, contracttype, symbol_short,
+    token, Address, BytesN, Env, MuxedAddress, String, Symbol, Vec,
 };
 
 const INSTANCE_TTL_THRESHOLD: u32 = 10_000;
 const INSTANCE_TTL_BUMP: u32 = 518_400;
+const MAX_PAGE_SIZE: u32 = 50;
+
+contractmeta!(key = "name", val = "AgentRail Escrow");
+contractmeta!(key = "version", val = "0.2.0");
 
 #[contracttype]
 #[derive(Clone)]
@@ -106,6 +110,8 @@ pub enum Error {
     InvalidStatus = 9,
     DeadlineNotReached = 10,
     InvalidRating = 11,
+    InvalidLimit = 12,
+    Overflow = 13,
 }
 
 #[contract]
@@ -325,16 +331,11 @@ impl AgentRailContract {
         Ok(job)
     }
 
-    pub fn approve_job(
-        env: Env,
-        payer: Address,
-        job_id: u64,
-        rating: u32,
-    ) -> Result<Job, Error> {
+    pub fn approve_job(env: Env, payer: Address, job_id: u64, rating: u32) -> Result<Job, Error> {
         ensure_initialized(&env)?;
         payer.require_auth();
 
-        if rating > 5 {
+        if rating == 0 || rating > 5 {
             return Err(Error::InvalidRating);
         }
 
@@ -360,10 +361,16 @@ impl AgentRailContract {
         env.storage().instance().set(&DataKey::Job(job_id), &job);
 
         let mut agent = read_agent(&env, job.agent_id)?;
-        agent.jobs_completed += 1;
-        agent.rating_total += rating;
-        agent.rating_count += 1;
-        agent.earned += job.amount;
+        agent.jobs_completed = agent.jobs_completed.checked_add(1).ok_or(Error::Overflow)?;
+        agent.rating_total = agent
+            .rating_total
+            .checked_add(rating)
+            .ok_or(Error::Overflow)?;
+        agent.rating_count = agent.rating_count.checked_add(1).ok_or(Error::Overflow)?;
+        agent.earned = agent
+            .earned
+            .checked_add(job.amount)
+            .ok_or(Error::Overflow)?;
         env.storage()
             .instance()
             .set(&DataKey::Agent(job.agent_id), &agent);
@@ -479,8 +486,11 @@ impl AgentRailContract {
 
         if release_to_agent {
             let mut agent = read_agent(&env, job.agent_id)?;
-            agent.jobs_completed += 1;
-            agent.earned += job.amount;
+            agent.jobs_completed = agent.jobs_completed.checked_add(1).ok_or(Error::Overflow)?;
+            agent.earned = agent
+                .earned
+                .checked_add(job.amount)
+                .ok_or(Error::Overflow)?;
             env.storage()
                 .instance()
                 .set(&DataKey::Agent(job.agent_id), &agent);
@@ -513,6 +523,21 @@ impl AgentRailContract {
         Ok(agents)
     }
 
+    pub fn list_agents_page(env: Env, start: u32, limit: u32) -> Result<Vec<Agent>, Error> {
+        validate_page(limit)?;
+        let ids = read_agent_ids(&env)?;
+        let end = core::cmp::min(start.saturating_add(limit), ids.len());
+        let mut agents = Vec::<Agent>::new(&env);
+        let mut index = start;
+        while index < end {
+            if let Some(id) = ids.get(index) {
+                agents.push_back(read_agent(&env, id)?);
+            }
+            index += 1;
+        }
+        Ok(agents)
+    }
+
     pub fn list_jobs(env: Env) -> Result<Vec<Job>, Error> {
         let ids = read_job_ids(&env)?;
         let mut jobs = Vec::<Job>::new(&env);
@@ -520,6 +545,29 @@ impl AgentRailContract {
             jobs.push_back(read_job(&env, id)?);
         }
         Ok(jobs)
+    }
+
+    pub fn list_jobs_page(env: Env, start: u32, limit: u32) -> Result<Vec<Job>, Error> {
+        validate_page(limit)?;
+        let ids = read_job_ids(&env)?;
+        let end = core::cmp::min(start.saturating_add(limit), ids.len());
+        let mut jobs = Vec::<Job>::new(&env);
+        let mut index = start;
+        while index < end {
+            if let Some(id) = ids.get(index) {
+                jobs.push_back(read_job(&env, id)?);
+            }
+            index += 1;
+        }
+        Ok(jobs)
+    }
+}
+
+fn validate_page(limit: u32) -> Result<(), Error> {
+    if limit == 0 || limit > MAX_PAGE_SIZE {
+        Err(Error::InvalidLimit)
+    } else {
+        Ok(())
     }
 }
 
@@ -574,12 +622,13 @@ fn read_job_ids(env: &Env) -> Result<Vec<u64>, Error> {
 }
 
 fn next_u64(env: &Env, key: DataKey) -> Result<u64, Error> {
-    let next = env
+    let next: u64 = env
         .storage()
         .instance()
         .get(&key)
         .ok_or(Error::NotInitialized)?;
-    env.storage().instance().set(&key, &(next + 1));
+    let following = next.checked_add(1).ok_or(Error::Overflow)?;
+    env.storage().instance().set(&key, &following);
     Ok(next)
 }
 

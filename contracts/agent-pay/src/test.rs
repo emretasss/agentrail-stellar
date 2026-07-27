@@ -158,21 +158,57 @@ fn rejects_underpriced_or_late_jobs() {
     let f = fixture();
     let agent_id = register_default_agent(&f);
 
-    let underpriced = f.client.try_create_job(
-        &f.payer,
-        &agent_id,
-        &hash(&f.env, 21),
-        &10,
-        &150,
-    );
+    let underpriced = f
+        .client
+        .try_create_job(&f.payer, &agent_id, &hash(&f.env, 21), &10, &150);
     assert_eq!(underpriced, Err(Ok(Error::InvalidAmount)));
 
-    let late = f.client.try_create_job(
-        &f.payer,
-        &agent_id,
-        &hash(&f.env, 22),
-        &250_000,
-        &100,
-    );
+    let late = f
+        .client
+        .try_create_job(&f.payer, &agent_id, &hash(&f.env, 22), &250_000, &100);
     assert_eq!(late, Err(Ok(Error::InvalidDeadline)));
+}
+
+#[test]
+fn paginates_registry_with_bounded_limits() {
+    let f = fixture();
+    register_default_agent(&f);
+    f.client.register_agent(
+        &f.agent_owner,
+        &s(&f.env, "second-agent"),
+        &s(&f.env, "Second Agent"),
+        &s(&f.env, "https://api.agentrail.dev/second"),
+        &s(&f.env, "research"),
+        &300_000,
+    );
+
+    let first_page = f.client.list_agents_page(&0, &1);
+    let second_page = f.client.list_agents_page(&1, &1);
+    assert_eq!(first_page.len(), 1);
+    assert_eq!(first_page.get(0).unwrap().id, 1);
+    assert_eq!(second_page.get(0).unwrap().id, 2);
+    assert_eq!(
+        f.client.try_list_agents_page(&0, &0),
+        Err(Ok(Error::InvalidLimit))
+    );
+    assert_eq!(
+        f.client.try_list_agents_page(&0, &51),
+        Err(Ok(Error::InvalidLimit))
+    );
+}
+
+#[test]
+fn rejects_zero_star_ratings() {
+    let f = fixture();
+    let agent_id = register_default_agent(&f);
+    let job_id = f
+        .client
+        .create_job(&f.payer, &agent_id, &hash(&f.env, 30), &250_000, &150);
+    f.client
+        .deliver_job(&f.agent_owner, &job_id, &hash(&f.env, 31));
+
+    assert_eq!(
+        f.client.try_approve_job(&f.payer, &job_id, &0),
+        Err(Ok(Error::InvalidRating))
+    );
 }
