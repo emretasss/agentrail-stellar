@@ -35,6 +35,7 @@ export type SubmitResult = {
   hash: string;
   status: string;
   explorerUrl: string;
+  returnValue?: unknown;
 };
 
 type FreighterBoolean = boolean | { isConnected?: boolean; isAllowed?: boolean };
@@ -251,6 +252,9 @@ export async function submitAgentRailCall(
       hash: submitted.hash,
       status: confirmed.status,
       explorerUrl: `https://stellar.expert/explorer/testnet/tx/${submitted.hash}`,
+      returnValue: confirmed.returnValue
+        ? StellarSdk.scValToNative(confirmed.returnValue)
+        : undefined,
     };
   } catch (error) {
     onStage?.("error");

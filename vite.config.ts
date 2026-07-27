@@ -11,7 +11,20 @@ export default defineConfig({
     },
   },
   build: {
-    chunkSizeWarningLimit: 1500,
+    chunkSizeWarningLimit: 1100,
+    sourcemap: true,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes("node_modules")) return;
+          if (id.includes("@stellar") || id.includes("stellar-sdk")) return "stellar";
+          if (id.includes("recharts") || id.includes("d3-")) return "charts";
+          if (id.includes("@sentry")) return "monitoring";
+          if (id.includes("@radix-ui")) return "radix";
+          return "vendor";
+        },
+      },
+    },
   },
   server: {
     port: 5173,
