@@ -8,6 +8,7 @@ import {
   Star,
   Zap,
 } from "lucide-react";
+import { motion } from "framer-motion";
 import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -77,8 +78,12 @@ export function Marketplace({
       <CardContent>
         <div className="grid gap-3 md:grid-cols-2">
           {filtered.map((agent, index) => (
-            <article
+            <motion.article
               key={agent.id}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.045 }}
+              whileHover={{ y: -3 }}
               className={cn(
                 "group cursor-pointer rounded-xl border bg-white/[.02] p-4 transition hover:-translate-y-0.5 hover:border-white/15 hover:bg-white/[.035]",
                 selectedAgentId === agent.id
@@ -152,7 +157,7 @@ export function Marketplace({
                   Hire
                 </Button>
               </div>
-            </article>
+            </motion.article>
           ))}
         </div>
         {filtered.length === 0 && (

@@ -1,14 +1,22 @@
-import { MessageSquareText } from "lucide-react";
+import { MessageSquareText, ShieldCheck } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 import { toast, Toaster } from "sonner";
-import { AppShell } from "@/components/app-shell";
+import { AppShell, type AppView } from "@/components/app-shell";
 import { DashboardOverview } from "@/components/dashboard-overview";
 import { JobActivity } from "@/components/job-activity";
 import { Marketplace } from "@/components/marketplace";
 import {
+  MissionCopilot,
+  missionPlanToBrief,
+  type MissionPlan,
+} from "@/components/mission-copilot";
+import { ProductStory } from "@/components/product-story";
+import {
   ApproveJobDialog,
   CreateJobDialog,
   DeliverJobDialog,
+  EscrowActionDialog,
   FeedbackDialog,
   OnboardingDialog,
   RegisterAgentDialog,
@@ -16,6 +24,7 @@ import {
 import { ThemeProvider } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { ValidationHub } from "@/components/validation-hub";
 import {
   initialActivity,
   initialRegisterForm,
@@ -50,6 +59,12 @@ import type {
 } from "@/types/agentrail";
 
 function App() {
+  const [activeView, setActiveView] = useState<AppView>(() => {
+    const hash = window.location.hash.replace("#", "") as AppView;
+    return ["overview", "discover", "jobs", "copilot", "validation"].includes(hash)
+      ? hash
+      : "overview";
+  });
   const [wallet, setWallet] = useState<WalletState | null>(null);
   const [agents, setAgents] = useState<Agent[]>(
     stellarConfig.demoMode ? sampleAgents : [],
@@ -79,6 +94,8 @@ function App() {
   const [onboardingOpen, setOnboardingOpen] = useState(false);
   const [deliverOpen, setDeliverOpen] = useState(false);
   const [approveOpen, setApproveOpen] = useState(false);
+  const [escrowActionOpen, setEscrowActionOpen] = useState(false);
+  const [escrowAction, setEscrowAction] = useState<"refund" | "dispute">("refund");
   const [selectedJob, setSelectedJob] = useState<Job | undefined>();
   const [deliverable, setDeliverable] = useState("");
   const [rating, setRating] = useState(5);
@@ -99,7 +116,19 @@ function App() {
     }
   }, []);
 
+  useEffect(() => {
+    const onHashChange = () => {
+      const next = window.location.hash.replace("#", "") as AppView;
+      if (["overview", "discover", "jobs", "copilot", "validation"].includes(next)) {
+        setActiveView(next);
+      }
+    };
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+  }, []);
+
   async function refreshProtocol() {
+    setDataMode("loading");
     try {
       const snapshot = await loadProtocolSnapshot();
       setAgents(snapshot.agents);
@@ -230,7 +259,7 @@ function App() {
       const id =
         typeof result.returnValue === "bigint"
           ? Number(result.returnValue)
-          : Math.max(...agents.map((agent) => agent.id)) + 1;
+          : Math.max(0, ...agents.map((agent) => agent.id)) + 1;
       const nextAgent: Agent = {
         id,
         ...registerForm,
@@ -482,6 +511,58 @@ function App() {
     }
   }
 
+  function openEscrowAction(job: Job, action: "refund" | "dispute") {
+    setSelectedJob(job);
+    setEscrowAction(action);
+    resetTransaction();
+    setEscrowActionOpen(true);
+  }
+
+  async function handleEscrowAction(event: FormEvent) {
+    event.preventDefault();
+    if (!selectedJob) return;
+    const job = selectedJob;
+    const action = escrowAction;
+    setBusy(`${action}-${job.id}`);
+    resetTransaction();
+    try {
+      const signer = requireWallet();
+      if (!job.chainBacked) {
+        throw new Error("Demo jobs cannot perform real escrow actions.");
+      }
+      const functionName = action === "refund" ? "refund_expired" : "dispute_job";
+      const result = await submitAgentRailCall(
+        signer.address,
+        functionName,
+        [scVal.address(signer.address), scVal.u64(job.id)],
+        setTransactionStage,
+      );
+      recordWalletTransaction(signer.address, result.hash, functionName);
+      pushActivity(
+        action === "refund" ? "Escrow refunded" : "Dispute opened",
+        action === "refund"
+          ? `Job #${job.id} funds returned to the buyer.`
+          : `Job #${job.id} is frozen for administrator review.`,
+        action === "refund" ? "success" : "warning",
+        result.hash,
+      );
+      toast.success(action === "refund" ? "Escrow refunded" : "Dispute opened");
+      setEscrowActionOpen(false);
+      await refreshProtocol();
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Escrow action failed.";
+      captureProductError(error, {
+        flow: escrowAction,
+        jobId: job.id,
+      });
+      pushActivity("Escrow action failed", message, "error");
+      toast.error("Could not update escrow", { description: message });
+    } finally {
+      setBusy(null);
+    }
+  }
+
   function selectAgent(agent: Agent, openJob = false) {
     setSelectedAgentId(agent.id);
     setJobAmount(decimalFromStroops(agent.priceStroops));
@@ -503,6 +584,45 @@ function App() {
     if (!open) window.localStorage.setItem("agentrail.onboarding.seen", "true");
   }
 
+  function navigate(view: AppView) {
+    setActiveView(view);
+    window.history.replaceState(null, "", `#${view}`);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    trackEvent("workspace_viewed", { view });
+  }
+
+  function openCreateJob() {
+    if (!selectedAgent) {
+      navigate("discover");
+      toast.info("Choose an agent first");
+      return;
+    }
+    resetTransaction();
+    setJobOpen(true);
+  }
+
+  function useMissionPlan(plan: MissionPlan) {
+    setBrief(missionPlanToBrief(plan));
+    const minimumPrice = selectedAgent
+      ? Number(decimalFromStroops(selectedAgent.priceStroops))
+      : 0;
+    setJobAmount(String(Math.max(plan.recommendedBudgetXlm, minimumPrice)));
+    setDeadlineLedgers(String(plan.deadlineLedgers));
+    trackEvent("copilot_plan_applied", {
+      source: "mission_copilot",
+      deliverables: plan.deliverables.length,
+    });
+    if (selectedAgent) {
+      resetTransaction();
+      setJobOpen(true);
+    } else {
+      navigate("discover");
+      toast.info("Mission ready", {
+        description: "Choose a verified agent to fund this mission.",
+      });
+    }
+  }
+
   return (
     <ThemeProvider defaultTheme="dark">
       <TooltipProvider delayDuration={200}>
@@ -510,91 +630,113 @@ function App() {
         wallet={wallet}
         connecting={busy === "wallet"}
         jobCount={jobs.length}
+        activeView={activeView}
+        dataMode={dataMode}
+        onNavigate={navigate}
         onConnect={handleConnect}
         onOpenOnboarding={() => setOnboardingOpen(true)}
       >
-        <div id="overview" className="scroll-mt-20">
-          <DashboardOverview
-            stats={stats}
-            dataMode={dataMode}
-            latestLedger={latestLedger}
-            onRegisterAgent={() => {
-              resetTransaction();
-              setRegisterOpen(true);
-            }}
-            onCreateJob={() => {
-              resetTransaction();
-              setJobOpen(true);
-            }}
-          />
-        </div>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeView}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -5 }}
+            transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+          >
+            {activeView === "overview" && (
+              <>
+                <DashboardOverview
+                  stats={stats}
+                  dataMode={dataMode}
+                  latestLedger={latestLedger}
+                  onRegisterAgent={() => {
+                    resetTransaction();
+                    setRegisterOpen(true);
+                  }}
+                  onCreateJob={openCreateJob}
+                  onRefresh={() => void refreshProtocol()}
+                />
+                <ProductStory />
+              </>
+            )}
 
-        <section
-          id="marketplace"
-          className="mt-3 grid scroll-mt-20 gap-3 xl:grid-cols-[1.55fr_.45fr]"
-        >
-          <Marketplace
-            agents={agents}
-            selectedAgentId={selectedAgentId}
-            onSelect={(agent) => selectAgent(agent)}
-            onHire={(agent) => selectAgent(agent, true)}
-          />
-          <aside className="rounded-xl border border-white/[.08] bg-gradient-to-b from-emerald-400/[.055] to-transparent p-5">
-            <p className="text-[10px] font-semibold uppercase tracking-[.18em] text-emerald-400">
-              Built for trust
-            </p>
-            <h3 className="mt-3 text-lg font-semibold tracking-tight text-slate-100">
-              Settlement without platform custody.
-            </h3>
-            <p className="mt-2 text-xs leading-5 text-slate-500">
-              Briefs and deliverables remain private while their SHA-256 proofs create an
-              immutable audit trail on Stellar.
-            </p>
-            <div className="mt-4 rounded-lg border border-white/[.06] bg-slate-950/40 p-3 text-[10px] text-slate-500">
-              {dataMode === "loading" && "Loading verified contract state…"}
-              {dataMode === "live" &&
-                `Live contract state · ledger ${latestLedger ?? "—"}`}
-              {dataMode === "demo" && "Demo mode · transactions are disabled"}
-              {dataMode === "error" &&
-                "Contract state unavailable · check RPC configuration"}
-            </div>
-            <div className="mt-6 grid gap-3">
-              {[
-                ["Buyer-controlled release", "Funds move only after explicit approval."],
-                ["Deadline recovery", "Expired, undelivered jobs can be refunded."],
-                ["Portable reputation", "Ratings follow the agent, not a platform."],
-              ].map(([title, copy], index) => (
-                <div key={title} className="flex gap-3">
-                  <span className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full bg-emerald-400/10 text-[10px] font-semibold text-emerald-300">
-                    {index + 1}
-                  </span>
-                  <div>
-                    <strong className="block text-xs text-slate-300">{title}</strong>
-                    <span className="mt-0.5 block text-[10px] leading-4 text-slate-600">{copy}</span>
+            {activeView === "discover" && (
+              <section className="grid gap-4 xl:grid-cols-[1.55fr_.45fr]">
+                <Marketplace
+                  agents={agents}
+                  selectedAgentId={selectedAgentId}
+                  onSelect={(agent) => selectAgent(agent)}
+                  onHire={(agent) => selectAgent(agent, true)}
+                />
+                <aside className="relative overflow-hidden rounded-xl border border-white/[.07] bg-gradient-to-b from-emerald-400/[.07] via-violet-400/[.025] to-transparent p-5">
+                  <div className="absolute -right-16 -top-16 size-44 rounded-full bg-emerald-400/10 blur-3xl" />
+                  <ShieldCheck className="relative text-emerald-300" size={22} />
+                  <p className="relative mt-5 text-[10px] font-semibold uppercase tracking-[.18em] text-emerald-400">
+                    Verifiable by design
+                  </p>
+                  <h2 className="relative mt-3 text-xl font-semibold tracking-tight text-white">
+                    Hire capability, not marketing claims.
+                  </h2>
+                  <p className="relative mt-2 text-xs leading-5 text-slate-500">
+                    Every live profile is owned by a Stellar address. Completed work and
+                    ratings come from contract settlement rather than editable platform data.
+                  </p>
+                  <div className="relative mt-5 rounded-xl border border-white/[.06] bg-slate-950/45 p-3 text-[10px] text-slate-500">
+                    {dataMode === "loading" && "Loading verified contract state…"}
+                    {dataMode === "live" && `Live contract · ledger ${latestLedger ?? "—"}`}
+                    {dataMode === "demo" && "Demo mode · signing disabled"}
+                    {dataMode === "error" && "RPC unavailable · retry shortly"}
                   </div>
-                </div>
-              ))}
-            </div>
-          </aside>
-        </section>
+                  <div className="relative mt-6 grid gap-3">
+                    {[
+                      ["Owner authorization", "Only the registered owner can deliver work."],
+                      ["Buyer-controlled release", "Funds move after explicit acceptance."],
+                      ["Portable reputation", "Ratings remain with the on-chain profile."],
+                      ["Deadline recovery", "Expired undelivered work can be refunded."],
+                    ].map(([title, copy], index) => (
+                      <div key={title} className="flex gap-3">
+                        <span className="grid size-6 shrink-0 place-items-center rounded-lg bg-white/[.035] text-[10px] text-slate-400">
+                          {index + 1}
+                        </span>
+                        <div>
+                          <strong className="block text-xs text-slate-300">{title}</strong>
+                          <span className="mt-1 block text-[10px] leading-4 text-slate-600">{copy}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </aside>
+              </section>
+            )}
 
-        <div id="jobs" className="mt-3 scroll-mt-20">
-          <JobActivity
-            jobs={jobs}
-            agents={agents}
-            events={activity}
-            busy={busy}
-            walletAddress={wallet?.address}
-            onDeliver={openDeliver}
-            onApprove={openApprove}
-          />
-        </div>
+            {activeView === "jobs" && (
+              <JobActivity
+                jobs={jobs}
+                agents={agents}
+                events={activity}
+                busy={busy}
+                walletAddress={wallet?.address}
+                latestLedger={latestLedger}
+                onDeliver={openDeliver}
+                onApprove={openApprove}
+                onRefund={(job) => openEscrowAction(job, "refund")}
+                onDispute={(job) => openEscrowAction(job, "dispute")}
+              />
+            )}
+
+            {activeView === "copilot" && <MissionCopilot onUsePlan={useMissionPlan} />}
+
+            {activeView === "validation" && (
+              <ValidationHub onFeedback={() => setFeedbackOpen(true)} />
+            )}
+          </motion.div>
+        </AnimatePresence>
 
         <footer
-          id="validation"
-          className="mt-6 flex scroll-mt-20 flex-col gap-3 border-t border-white/[.06] py-5 text-[11px] text-slate-600 sm:flex-row sm:items-center sm:justify-between"
+          className="mt-8 flex flex-col gap-3 border-t border-white/[.055] py-5 text-[10px] text-slate-700 sm:flex-row sm:items-center sm:justify-between"
         >
-          <span>AgentRail · Stellar Testnet · Non-custodial escrow protocol</span>
+          <span>AgentRail v0.3 · Stellar Testnet · OpenAI-assisted mission design · Non-custodial escrow</span>
           <Button variant="ghost" size="sm" onClick={() => setFeedbackOpen(true)}>
             <MessageSquareText size={13} />
             Share feedback
@@ -645,6 +787,14 @@ function App() {
         rating={rating}
         onRatingChange={setRating}
         onSubmit={handleApprove}
+        stage={transactionStage}
+      />
+      <EscrowActionDialog
+        open={escrowActionOpen}
+        onOpenChange={setEscrowActionOpen}
+        job={selectedJob}
+        action={escrowAction}
+        onConfirm={handleEscrowAction}
         stage={transactionStage}
       />
       <FeedbackDialog

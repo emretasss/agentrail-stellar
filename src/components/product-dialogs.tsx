@@ -381,6 +381,62 @@ export function ApproveJobDialog({
   );
 }
 
+export function EscrowActionDialog({
+  open,
+  onOpenChange,
+  job,
+  action,
+  onConfirm,
+  stage,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  job?: Job;
+  action: "refund" | "dispute";
+  onConfirm: (event: FormEvent) => void;
+  stage: TransactionStage;
+}) {
+  const busy = !["idle", "success", "error"].includes(stage);
+  const refund = action === "refund";
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <Badge variant={refund ? "secondary" : "warning"} className="mb-2 w-fit">
+            <ShieldCheck size={11} />
+            {refund ? "Deadline recovery" : "Escrow dispute"}
+          </Badge>
+          <DialogTitle>
+            {refund ? `Refund expired job #${job?.id}` : `Dispute job #${job?.id}`}
+          </DialogTitle>
+          <DialogDescription>
+            {refund
+              ? "The contract will return the full escrow amount to the original payer. This succeeds only after the deadline and before delivery."
+              : "The contract will freeze this job in Disputed state until the configured administrator resolves the escrow."}
+          </DialogDescription>
+        </DialogHeader>
+        <form className="grid gap-4" onSubmit={onConfirm}>
+          <div className="rounded-xl border border-white/[.07] bg-white/[.025] p-4">
+            <span className="text-[10px] uppercase tracking-wider text-slate-600">Escrow amount</span>
+            <strong className="mt-1 block text-lg text-slate-200">
+              {job ? decimalFromStroops(job.amountStroops) : "—"} XLM
+            </strong>
+          </div>
+          <TransactionStatus stage={stage} />
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" variant={refund ? "default" : "destructive"} disabled={busy || !job}>
+              {busy ? stageCopy[stage] : refund ? "Confirm refund" : "Open dispute"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export function OnboardingDialog({
   open,
   onOpenChange,
@@ -494,6 +550,8 @@ export function FeedbackDialog({
   const [role, setRole] = useState<Feedback["role"]>("buyer");
   const [message, setMessage] = useState("");
   const [saved, setSaved] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [forwarded, setForwarded] = useState(false);
   const metrics = useMemo(() => {
     const evidence = getEvidence();
     const feedback = getFeedback();
@@ -504,17 +562,34 @@ export function FeedbackDialog({
     };
   }, [open, saved]);
 
-  function submit(event: FormEvent) {
+  async function submit(event: FormEvent) {
     event.preventDefault();
-    saveFeedback({
+    setSubmitting(true);
+    const feedbackItem: Feedback = {
       id: crypto.randomUUID(),
       wallet: wallet || "anonymous",
       score,
       role,
       message: message.trim(),
       createdAt: new Date().toISOString(),
-    });
+    };
+    saveFeedback(feedbackItem);
+    try {
+      const response = await fetch("/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(feedbackItem),
+        signal: AbortSignal.timeout(6000),
+      });
+      if (response.ok) {
+        const result = (await response.json()) as { forwarded?: boolean };
+        setForwarded(Boolean(result.forwarded));
+      }
+    } catch {
+      // Local evidence remains available even when the optional collector is offline.
+    }
     setSaved(true);
+    setSubmitting(false);
   }
 
   return (
@@ -549,6 +624,11 @@ export function FeedbackDialog({
               <Download size={15} />
               Export validation evidence
             </Button>
+            <p className="text-center text-[10px] text-slate-600">
+              {forwarded
+                ? "Feedback was also synchronized to the configured research collector."
+                : "Feedback is stored on this device and included in the export."}
+            </p>
           </div>
         ) : (
           <form className="grid gap-4" onSubmit={submit}>
@@ -600,7 +680,9 @@ export function FeedbackDialog({
               />
             </Field>
             <DialogFooter>
-              <Button type="submit">Submit feedback</Button>
+              <Button type="submit" disabled={submitting}>
+                {submitting ? "Saving…" : "Submit feedback"}
+              </Button>
             </DialogFooter>
           </form>
         )}

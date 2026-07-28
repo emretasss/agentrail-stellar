@@ -4,9 +4,17 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "cleanUrls": true,
+  "functions": {
+    "api/copilot.ts": {
+      "maxDuration": 30
+    },
+    "api/feedback.ts": {
+      "maxDuration": 10
+    }
+  },
   "rewrites": [
     {
-      "source": "/((?!assets/|agentrail-mark.svg|favicon.ico).*)",
+      "source": "/((?!api/|assets/|agentrail-mark.svg|favicon.ico).*)",
       "destination": "/index.html"
     }
   ],
@@ -34,6 +42,14 @@
         {
           "key": "Permissions-Policy",
           "value": "camera=(), microphone=(), geolocation=()"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "Cross-Origin-Opener-Policy",
+          "value": "same-origin"
         }
       ]
     }

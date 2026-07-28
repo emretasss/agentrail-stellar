@@ -4,6 +4,7 @@ import {
   Clock3,
   LockKeyhole,
   Plus,
+  RefreshCw,
   ShieldCheck,
   Sparkles,
 } from "lucide-react";
@@ -51,12 +52,14 @@ export function DashboardOverview({
   latestLedger,
   onCreateJob,
   onRegisterAgent,
+  onRefresh,
 }: {
   stats: Stats;
   dataMode: "loading" | "live" | "demo" | "error";
   latestLedger: number | null;
   onCreateJob: () => void;
   onRegisterAgent: () => void;
+  onRefresh: () => void;
 }) {
   const lifecycle = [
     { label: "Registered agents", value: stats.agents, icon: Bot },
@@ -176,6 +179,12 @@ export function DashboardOverview({
               <p className="mt-2 text-xs leading-5 text-slate-500">
                 Contract reachable, signing network verified, and confirmation polling active.
               </p>
+              {dataMode === "error" && (
+                <Button className="mt-4" size="sm" variant="outline" onClick={onRefresh}>
+                  <RefreshCw size={13} />
+                  Retry contract read
+                </Button>
+              )}
               <div className="mt-5 grid grid-cols-3 gap-2">
                 {[
                   ["RPC", dataMode === "live" ? "Connected" : "Checking"],

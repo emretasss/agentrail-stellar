@@ -5,6 +5,8 @@ import {
   ExternalLink,
   FileCheck2,
   LockKeyhole,
+  RotateCcw,
+  TriangleAlert,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -27,16 +29,22 @@ export function JobActivity({
   events,
   busy,
   walletAddress,
+  latestLedger,
   onDeliver,
   onApprove,
+  onRefund,
+  onDispute,
 }: {
   jobs: Job[];
   agents: Agent[];
   events: ActivityEvent[];
   busy: string | null;
   walletAddress?: string;
+  latestLedger: number | null;
   onDeliver: (job: Job) => void;
   onApprove: (job: Job) => void;
+  onRefund: (job: Job) => void;
+  onDispute: (job: Job) => void;
 }) {
   return (
     <section className="grid gap-3 xl:grid-cols-[1.4fr_.75fr]">
@@ -70,6 +78,15 @@ export function JobActivity({
                   job.status === "Delivered" &&
                   Boolean(walletAddress) &&
                   job.payer === walletAddress;
+                const isPayer = Boolean(walletAddress) && job.payer === walletAddress;
+                const canRefund =
+                  job.status === "Funded" &&
+                  isPayer &&
+                  Boolean(latestLedger && job.deadlineLedger) &&
+                  latestLedger! > job.deadlineLedger!;
+                const canDispute =
+                  isPayer &&
+                  (job.status === "Funded" || job.status === "Delivered");
                 return (
                   <tr key={job.id} className="border-b border-white/[.045] text-xs last:border-0">
                     <td className="px-5 py-3.5">
@@ -91,6 +108,7 @@ export function JobActivity({
                       </Badge>
                     </td>
                     <td className="px-5 py-3.5 text-right">
+                      <div className="flex justify-end gap-1">
                       {canDeliver && (
                         <Button
                           size="sm"
@@ -112,10 +130,32 @@ export function JobActivity({
                           Release
                         </Button>
                       )}
-                      {job.status === "Funded" && !canDeliver && (
+                      {canRefund && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={busy === `refund-${job.id}`}
+                          onClick={() => onRefund(job)}
+                        >
+                          <RotateCcw size={12} />
+                          Refund
+                        </Button>
+                      )}
+                      {canDispute && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          disabled={busy === `dispute-${job.id}`}
+                          onClick={() => onDispute(job)}
+                          aria-label={`Dispute job ${job.id}`}
+                        >
+                          <TriangleAlert size={12} />
+                        </Button>
+                      )}
+                      {job.status === "Funded" && !canDeliver && !canRefund && !canDispute && (
                         <span className="text-[10px] text-slate-600">Agent action</span>
                       )}
-                      {job.status === "Delivered" && !canApprove && (
+                      {job.status === "Delivered" && !canApprove && !canDispute && (
                         <span className="text-[10px] text-slate-600">Buyer action</span>
                       )}
                       {job.txHash && job.status !== "Delivered" && job.status !== "Funded" && (
@@ -129,6 +169,7 @@ export function JobActivity({
                           </a>
                         </Button>
                       )}
+                      </div>
                     </td>
                   </tr>
                 );
