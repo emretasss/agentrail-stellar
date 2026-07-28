@@ -1,36 +1,77 @@
 # Three-Minute Demo Script
 
-## 0:00–0:25 — Problem
+Record the final Vercel deployment at 1080p. Prepare a funded Freighter Testnet
+wallet, a buyer wallet, an agent-owner wallet, and a short mission prompt before
+recording. Do not show secret keys or environment variables.
 
-Explain that AI services need portable identity, safe settlement, and verifiable
-delivery without a centralized platform holding funds.
+## 0:00–0:25 — Problem and product
 
-## 0:25–0:50 — Product
+“AI agents can perform valuable work, but buyers still lack clear scope, safe
+payment, private delivery proof, and portable reputation. AgentRail is a trust
+and settlement workspace for paid AI work on Stellar.”
 
-Show the command center, protocol health, marketplace reputation signals, and
-responsive mobile layout.
+Show Command Center, live ledger status, real contract metrics, and the four-step
+scope → protect → prove → settle flow.
 
-## 0:50–1:20 — Onboarding and wallet
+## 0:25–0:55 — AI Mission Copilot
 
-Open the onboarding walkthrough, connect Freighter on Testnet, and point out the
-network check and non-custodial signing model.
+Open Mission Copilot. Paste a real task and generate the structured mission.
+Point out:
 
-## 1:20–2:20 — Complete escrow lifecycle
+- deliverables and acceptance criteria;
+- risk list;
+- suggested XLM budget;
+- deadline in Stellar ledgers;
+- server-side OpenAI integration.
 
-1. Publish an agent.
-2. Create a job and fund escrow.
-3. Submit a deliverable proof.
-4. Approve the work and release payment.
-5. Open the transaction in Stellar Expert.
+Click **Use this plan in escrow**.
 
-Keep the wallet confirmation and transaction progress states visible.
+## 0:55–1:20 — Discovery and onboarding
 
-## 2:20–2:45 — Architecture and quality
+Show Agent Network. Explain that ownership, completed work, price, and rating
+come from the Soroban contract. Open Product Tour and connect Freighter on
+Testnet. Mention that AgentRail never receives a private key.
 
-Show the Soroban tests, CI workflow, typed events, bounded pagination, Sentry
-configuration, and analytics event tracking.
+## 1:20–2:15 — Complete escrow lifecycle
 
-## 2:45–3:00 — Validation
+Use prepared wallets to demonstrate:
 
-Open the feedback flow and show the exported real-user validation report. End
-with the production URL, repository, contract ID, and next product milestone.
+1. Select a contract-backed agent.
+2. Review the AI-generated brief and fund XLM escrow.
+3. Switch to the agent owner and submit a deliverable reference.
+4. Switch to the buyer and approve with a rating.
+5. Open the confirmed transaction in Stellar Expert.
+
+Keep the prepare, sign, submit, and confirm states visible. Explain that only
+SHA-256 proofs enter contract storage.
+
+## 2:15–2:40 — Engineering quality
+
+Show:
+
+- the multi-view responsive workspace and 390px mobile view;
+- seven Soroban tests;
+- CI workflow;
+- bounded pagination and typed events;
+- Vercel Analytics;
+- configured Sentry project;
+- public architecture document.
+
+## 2:40–3:00 — Real-user validation
+
+Open Validation Hub. Show ten real wallet interactions, feedback totals, and the
+exported evidence report. End on:
+
+- production URL;
+- public repository;
+- Testnet contract ID;
+- one-sentence roadmap: stablecoin escrow, event indexing, and x402/MPP paid API
+  modes.
+
+## Recording checklist
+
+- No placeholder URL is visible.
+- Mission Copilot shows “OpenAI generated,” not local-template fallback.
+- Sentry and Vercel Analytics screenshots contain real production data.
+- The final interaction links open successfully in an incognito browser.
+- The video URL is added to README and `docs/LEVEL4_SUBMISSION.md`.
