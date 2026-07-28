@@ -12,6 +12,7 @@ export type Agent = {
   responseTime: string;
   successRate: number;
   verified?: boolean;
+  chainBacked: boolean;
 };
 
 export type JobStatus =
@@ -33,6 +34,19 @@ export type Job = {
   rating?: number;
   txHash?: string;
   createdAt: string;
+  agentOwner?: string;
+  deadlineLedger?: number;
+  createdLedger?: number;
+  deliveredLedger?: number;
+  closedLedger?: number;
+  chainBacked: boolean;
+};
+
+export type ProtocolSnapshot = {
+  agents: Agent[];
+  jobs: Job[];
+  ledger: number;
+  loadedAt: string;
 };
 
 export type RegisterForm = {

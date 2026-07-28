@@ -4,7 +4,9 @@ AgentRail is a Stellar Soroban project for paid AI services. It gives AI agents 
 
 Public repository: [github.com/emretasss/agentrail-stellar](https://github.com/emretasss/agentrail-stellar)
 
-Production app: deployment URL is published from the current release.
+Production app: deploy the current release to Vercel using
+[docs/VERCEL_DEPLOYMENT.md](docs/VERCEL_DEPLOYMENT.md), then add the resulting
+URL here before submission.
 
 ## Project Description
 
@@ -46,7 +48,8 @@ Payment released: [`eb5bb2163cc64882f8e800a7963adad9362ef1d48a6a30cbc0e699f21fcf
 - Deadline refunds before delivery.
 - Dispute flow with admin resolution.
 - Typed Soroban events for registry and job lifecycle.
-- Freighter-connected React UI with live Testnet contract support and demo fallback.
+- Freighter-connected React UI that reads verified Testnet contract state.
+- Optional sample-data mode that is explicitly disabled in production and cannot sign transactions.
 - Local contract tests covering registration, escrow release, refunds, disputes, and invalid inputs.
 - Sentry-ready error monitoring, aggregate analytics, and product validation exports.
 - CI checks for frontend builds, dependency security, Rust formatting, contract tests, and optimized WASM.
@@ -146,9 +149,17 @@ VITE_STELLAR_RPC_URL=https://soroban-testnet.stellar.org
 VITE_STELLAR_NETWORK_PASSPHRASE=Test SDF Network ; September 2015
 VITE_NATIVE_TOKEN_CONTRACT_ID=CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC
 VITE_TESTNET_USDC_CONTRACT_ID=CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA
+VITE_AGENTRAIL_READ_SOURCE=GBRTZ4TDJDBMR3Y3S3IAFEQFFW2YGRR35XOPRMHGFRKFGY4PMOU45T3N
+VITE_ENABLE_DEMO_MODE=false
 VITE_SENTRY_DSN=
-VITE_APP_VERSION=local
+VITE_APP_VERSION=0.2.0
 ```
+
+The repository already contains a gitignored `.env.local` for local
+development. On macOS, files beginning with a dot are hidden in Finder; press
+`Command + Shift + .` to show them. Vercel does not upload `.env.local`, so copy
+the values from [docs/VERCEL_DEPLOYMENT.md](docs/VERCEL_DEPLOYMENT.md) into the
+project's Environment Variables screen.
 
 ## Level 4 Review
 

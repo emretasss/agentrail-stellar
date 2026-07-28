@@ -4,6 +4,7 @@ import {
   Check,
   CircleDollarSign,
   Download,
+  FileCheck2,
   MessageSquareText,
   ShieldCheck,
   Star,
@@ -34,6 +35,7 @@ import { cn } from "@/lib/utils";
 import type {
   Agent,
   Feedback,
+  Job,
   RegisterForm,
   TransactionStage,
 } from "@/types/agentrail";
@@ -248,6 +250,137 @@ export function CreateJobDialog({
   );
 }
 
+export function DeliverJobDialog({
+  open,
+  onOpenChange,
+  job,
+  deliverable,
+  onDeliverableChange,
+  onSubmit,
+  stage,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  job?: Job;
+  deliverable: string;
+  onDeliverableChange: (value: string) => void;
+  onSubmit: (event: FormEvent) => void;
+  stage: TransactionStage;
+}) {
+  const busy = !["idle", "success", "error"].includes(stage);
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <Badge className="mb-2 w-fit">
+            <FileCheck2 size={11} />
+            Delivery proof
+          </Badge>
+          <DialogTitle>Submit deliverable for job #{job?.id}</DialogTitle>
+          <DialogDescription>
+            Enter the deliverable URL, content identifier, or result summary. AgentRail
+            stores only its SHA-256 proof on-chain.
+          </DialogDescription>
+        </DialogHeader>
+        <form className="grid gap-4" onSubmit={onSubmit}>
+          <Field label="Deliverable reference">
+            <Textarea
+              required
+              minLength={8}
+              maxLength={2000}
+              rows={6}
+              value={deliverable}
+              onChange={(event) => onDeliverableChange(event.target.value)}
+              placeholder="https://... or a concise delivery result that the buyer can verify"
+            />
+          </Field>
+          <TransactionStatus stage={stage} />
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={busy || !job}>
+              <FileCheck2 size={15} />
+              {busy ? stageCopy[stage] : "Record delivery proof"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+export function ApproveJobDialog({
+  open,
+  onOpenChange,
+  job,
+  rating,
+  onRatingChange,
+  onSubmit,
+  stage,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  job?: Job;
+  rating: number;
+  onRatingChange: (rating: number) => void;
+  onSubmit: (event: FormEvent) => void;
+  stage: TransactionStage;
+}) {
+  const busy = !["idle", "success", "error"].includes(stage);
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <Badge className="mb-2 w-fit">
+            <ShieldCheck size={11} />
+            Buyer approval
+          </Badge>
+          <DialogTitle>Release job #{job?.id} payment</DialogTitle>
+          <DialogDescription>
+            This action releases the full escrow amount to the agent and records your
+            rating on-chain. It cannot be reversed.
+          </DialogDescription>
+        </DialogHeader>
+        <form className="grid gap-5" onSubmit={onSubmit}>
+          <Field label="Agent rating">
+            <div className="flex gap-1">
+              {[1, 2, 3, 4, 5].map((value) => (
+                <button
+                  type="button"
+                  key={value}
+                  onClick={() => onRatingChange(value)}
+                  aria-label={`${value} stars`}
+                  className="rounded p-1"
+                >
+                  <Star
+                    size={24}
+                    className={
+                      value <= rating
+                        ? "fill-amber-300 text-amber-300"
+                        : "text-slate-700"
+                    }
+                  />
+                </button>
+              ))}
+            </div>
+          </Field>
+          <TransactionStatus stage={stage} />
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={busy || !job || rating < 1}>
+              <CircleDollarSign size={15} />
+              {busy ? stageCopy[stage] : "Release escrow"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export function OnboardingDialog({
   open,
   onOpenChange,
@@ -269,7 +402,7 @@ export function OnboardingDialog({
     {
       icon: Bot,
       title: "Choose a verified agent",
-      copy: "Compare reputation, response time, price and completion history.",
+      copy: "Compare on-chain rating, completed jobs, ownership, and price.",
     },
     {
       icon: ShieldCheck,

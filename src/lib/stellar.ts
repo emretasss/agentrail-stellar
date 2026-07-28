@@ -7,10 +7,13 @@ import {
   signTransaction,
 } from "@stellar/freighter-api";
 import type { TransactionStage } from "@/types/agentrail";
+import type { Agent, Job, JobStatus, ProtocolSnapshot } from "@/types/agentrail";
 
 const TESTNET_PASSPHRASE = "Test SDF Network ; September 2015";
 const DEPLOYED_TESTNET_CONTRACT =
   "CB6QV6VUJH4FRSLZRTOV2HBIIXSZ4V2YRTCE3S5U4KCLZE7QFW4YTLV5";
+const DEPLOYED_TESTNET_READ_SOURCE =
+  "GBRTZ4TDJDBMR3Y3S3IAFEQFFW2YGRR35XOPRMHGFRKFGY4PMOU45T3N";
 
 export const stellarConfig = {
   contractId:
@@ -23,6 +26,9 @@ export const stellarConfig = {
   nativeTokenContractId:
     import.meta.env.VITE_NATIVE_TOKEN_CONTRACT_ID ??
     "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC",
+  readSource:
+    import.meta.env.VITE_AGENTRAIL_READ_SOURCE ?? DEPLOYED_TESTNET_READ_SOURCE,
+  demoMode: import.meta.env.VITE_ENABLE_DEMO_MODE === "true",
 };
 
 export type WalletState = {
@@ -179,6 +185,150 @@ export async function getLatestLedgerSequence(): Promise<number> {
   const server = new StellarSdk.rpc.Server(stellarConfig.rpcUrl);
   const latest = await server.getLatestLedger();
   return latest.sequence;
+}
+
+type NativeAgent = {
+  id: bigint | number;
+  owner: unknown;
+  handle: string;
+  name: string;
+  endpoint: string;
+  category: string;
+  price: bigint | number | string;
+  active: boolean;
+  jobs_completed: number;
+  rating_total: number;
+  rating_count: number;
+};
+
+type NativeJob = {
+  id: bigint | number;
+  agent_id: bigint | number;
+  payer: unknown;
+  agent_owner: unknown;
+  brief_hash: unknown;
+  deliverable_hash: unknown;
+  amount: bigint | number | string;
+  deadline_ledger: number;
+  status: number;
+  rating: number;
+  created_ledger: number;
+  delivered_ledger: number;
+  closed_ledger: number;
+};
+
+const JOB_STATUS: JobStatus[] = [
+  "Funded",
+  "Delivered",
+  "Released",
+  "Refunded",
+  "Disputed",
+];
+
+function addressToString(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (value && typeof value === "object" && "toString" in value) {
+    return String(value);
+  }
+  return "";
+}
+
+function bytesToHex(value: unknown): string {
+  if (typeof value === "string") return value.replace(/^0x/, "");
+  if (value instanceof Uint8Array) {
+    return [...value]
+      .map((byte) => byte.toString(16).padStart(2, "0"))
+      .join("");
+  }
+  return "";
+}
+
+async function readAgentRailCall<T>(
+  functionName: string,
+  args: StellarSdk.xdr.ScVal[] = [],
+): Promise<T> {
+  if (!stellarConfig.contractId || !stellarConfig.readSource) {
+    throw new Error("AgentRail read configuration is incomplete.");
+  }
+
+  const server = new StellarSdk.rpc.Server(stellarConfig.rpcUrl);
+  const account = await server.getAccount(stellarConfig.readSource);
+  const contract = new StellarSdk.Contract(stellarConfig.contractId);
+  const transaction = new StellarSdk.TransactionBuilder(account, {
+    fee: StellarSdk.BASE_FEE,
+    networkPassphrase: stellarConfig.networkPassphrase,
+  })
+    .addOperation(contract.call(functionName, ...args))
+    .setTimeout(30)
+    .build();
+  const simulation = await server.simulateTransaction(transaction);
+
+  if (StellarSdk.rpc.Api.isSimulationError(simulation)) {
+    throw new Error(`Contract read failed: ${simulation.error}`);
+  }
+  if (!simulation.result) {
+    throw new Error(`Contract read returned no result for ${functionName}.`);
+  }
+  return StellarSdk.scValToNative(simulation.result.retval) as T;
+}
+
+export async function loadProtocolSnapshot(): Promise<ProtocolSnapshot> {
+  const [nativeAgents, nativeJobs, ledger] = await Promise.all([
+    readAgentRailCall<NativeAgent[]>("list_agents"),
+    readAgentRailCall<NativeJob[]>("list_jobs"),
+    getLatestLedgerSequence(),
+  ]);
+
+  const agents: Agent[] = nativeAgents.map((agent) => {
+    const ratingCount = Number(agent.rating_count);
+    return {
+      id: Number(agent.id),
+      owner: addressToString(agent.owner),
+      handle: agent.handle,
+      name: agent.name,
+      endpoint: agent.endpoint,
+      category: agent.category,
+      priceStroops: BigInt(agent.price),
+      active: agent.active,
+      completed: Number(agent.jobs_completed),
+      rating:
+        ratingCount > 0 ? Number(agent.rating_total) / ratingCount : 0,
+      responseTime: "On-chain",
+      successRate: 0,
+      verified: true,
+      chainBacked: true,
+    };
+  });
+
+  const jobs: Job[] = nativeJobs.map((job) => {
+    const briefHash = bytesToHex(job.brief_hash);
+    const status = JOB_STATUS[Number(job.status)] ?? "Disputed";
+    return {
+      id: Number(job.id),
+      agentId: Number(job.agent_id),
+      payer: addressToString(job.payer),
+      agentOwner: addressToString(job.agent_owner),
+      amountStroops: BigInt(job.amount),
+      status,
+      brief: `Private brief · proof ${briefHash.slice(0, 12)}…`,
+      briefHash,
+      deliverableHash: bytesToHex(job.deliverable_hash),
+      rating: Number(job.rating) || undefined,
+      createdAt: "",
+      deadlineLedger: Number(job.deadline_ledger),
+      createdLedger: Number(job.created_ledger),
+      deliveredLedger: Number(job.delivered_ledger),
+      closedLedger: Number(job.closed_ledger),
+      chainBacked: true,
+    };
+  });
+
+  return {
+    agents,
+    jobs,
+    ledger,
+    loadedAt: new Date().toISOString(),
+  };
 }
 
 export async function submitAgentRailCall(

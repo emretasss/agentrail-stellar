@@ -15,6 +15,7 @@ export const sampleAgents: Agent[] = [
     responseTime: "1.8s",
     successRate: 99.2,
     verified: true,
+    chainBacked: false,
   },
   {
     id: 2,
@@ -30,6 +31,7 @@ export const sampleAgents: Agent[] = [
     responseTime: "4.2s",
     successRate: 98.7,
     verified: true,
+    chainBacked: false,
   },
   {
     id: 3,
@@ -45,6 +47,7 @@ export const sampleAgents: Agent[] = [
     responseTime: "2.6s",
     successRate: 97.9,
     verified: true,
+    chainBacked: false,
   },
   {
     id: 4,
@@ -60,6 +63,7 @@ export const sampleAgents: Agent[] = [
     responseTime: "3.4s",
     successRate: 99.6,
     verified: true,
+    chainBacked: false,
   },
 ];
 
@@ -76,6 +80,7 @@ export const sampleJobs: Job[] = [
     deliverableHash:
       "d2ad8f1a9a4027ea57f3ea88f813587cbd1c71e42087af52d92a44bc4a41e924",
     createdAt: "2026-07-26T08:38:00.000Z",
+    chainBacked: false,
   },
   {
     id: 13,
@@ -88,6 +93,7 @@ export const sampleJobs: Job[] = [
       "bc82f73d0d872d5e12c0ad227a8a90a14a76c383cde66ddc4f25f594dfab4a8e",
     rating: 5,
     createdAt: "2026-07-26T07:12:00.000Z",
+    chainBacked: false,
   },
   {
     id: 12,
@@ -99,6 +105,7 @@ export const sampleJobs: Job[] = [
     briefHash:
       "cd832c5328bb4f5ea125f3bb19c6d5c413503496fc1098f64afdf20315cc14aa",
     createdAt: "2026-07-25T20:42:00.000Z",
+    chainBacked: false,
   },
 ];
 
@@ -125,14 +132,4 @@ export const initialActivity: ActivityEvent[] = [
     tone: "neutral",
     at: new Date(Date.now() - 1000 * 60 * 4).toISOString(),
   },
-];
-
-export const volumeSeries = [
-  { day: "Mon", volume: 12.4, jobs: 18 },
-  { day: "Tue", volume: 16.8, jobs: 24 },
-  { day: "Wed", volume: 14.2, jobs: 21 },
-  { day: "Thu", volume: 22.6, jobs: 31 },
-  { day: "Fri", volume: 28.1, jobs: 38 },
-  { day: "Sat", volume: 24.7, jobs: 34 },
-  { day: "Sun", volume: 33.9, jobs: 47 },
 ];

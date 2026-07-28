@@ -9,7 +9,6 @@ import {
   LayoutDashboard,
   Menu,
   Radio,
-  Settings2,
   ShieldCheck,
   Wallet,
   X,
@@ -21,13 +20,6 @@ import { ModeToggle } from "@/components/mode-toggle";
 import { cn } from "@/lib/utils";
 import type { WalletState } from "@/lib/stellar";
 
-const nav = [
-  { label: "Overview", icon: LayoutDashboard, active: true },
-  { label: "Marketplace", icon: Bot },
-  { label: "My jobs", icon: BriefcaseBusiness, count: 3 },
-  { label: "Analytics", icon: BarChart3 },
-];
-
 export function shortAddress(value: string, size = 5) {
   if (value.length <= size * 2 + 3) return value;
   return `${value.slice(0, size)}…${value.slice(-size)}`;
@@ -37,16 +29,24 @@ export function AppShell({
   children,
   wallet,
   connecting,
+  jobCount,
   onConnect,
   onOpenOnboarding,
 }: {
   children: React.ReactNode;
   wallet: WalletState | null;
   connecting: boolean;
+  jobCount: number;
   onConnect: () => void;
   onOpenOnboarding: () => void;
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const nav = [
+    { label: "Overview", icon: LayoutDashboard, href: "#overview", active: true },
+    { label: "Marketplace", icon: Bot, href: "#marketplace" },
+    { label: "Jobs", icon: BriefcaseBusiness, href: "#jobs", count: jobCount },
+    { label: "Validation", icon: BarChart3, href: "#validation" },
+  ];
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -81,9 +81,11 @@ export function AppShell({
           <p className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-[.18em] text-slate-600">
             Workspace
           </p>
-          {nav.map(({ label, icon: Icon, active, count }) => (
-            <button
+          {nav.map(({ label, icon: Icon, href, active, count }) => (
+            <a
               key={label}
+              href={href}
+              onClick={() => setMobileOpen(false)}
               className={cn(
                 "group flex h-10 items-center gap-3 rounded-lg px-3 text-sm font-medium transition",
                 active
@@ -93,12 +95,12 @@ export function AppShell({
             >
               <Icon size={17} />
               <span>{label}</span>
-              {count && (
+              {Boolean(count) && (
                 <span className="ml-auto rounded bg-white/[.06] px-1.5 py-0.5 text-[10px] text-slate-400">
                   {count}
                 </span>
               )}
-            </button>
+            </a>
           ))}
         </nav>
 
@@ -106,14 +108,14 @@ export function AppShell({
           <p className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-[.18em] text-slate-600">
             Manage
           </p>
-          <button className="flex h-10 items-center gap-3 rounded-lg px-3 text-sm font-medium text-slate-500 transition hover:bg-white/[.04] hover:text-slate-200">
+          <a
+            href="#activity"
+            onClick={() => setMobileOpen(false)}
+            className="flex h-10 items-center gap-3 rounded-lg px-3 text-sm font-medium text-slate-500 transition hover:bg-white/[.04] hover:text-slate-200"
+          >
             <Activity size={17} />
             Activity
-          </button>
-          <button className="flex h-10 items-center gap-3 rounded-lg px-3 text-sm font-medium text-slate-500 transition hover:bg-white/[.04] hover:text-slate-200">
-            <Settings2 size={17} />
-            Settings
-          </button>
+          </a>
         </nav>
 
         <div className="mt-auto grid gap-3">

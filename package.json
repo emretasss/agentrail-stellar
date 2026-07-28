@@ -1,11 +1,11 @@
 {
   "name": "agentrail-stellar",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
-    "build": "tsc && vite build && node scripts/prepare-sites.mjs",
+    "build": "tsc && vite build",
     "check": "tsc --noEmit && cargo test",
     "audit": "npm audit --audit-level=high",
     "preview": "vite preview --host 0.0.0.0",
@@ -31,7 +31,6 @@
     "lucide-react": "^0.468.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "recharts": "^3.10.1",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.6.0",
     "tailwindcss": "^4.3.3",

@@ -6,7 +6,9 @@ import { DashboardOverview } from "@/components/dashboard-overview";
 import { JobActivity } from "@/components/job-activity";
 import { Marketplace } from "@/components/marketplace";
 import {
+  ApproveJobDialog,
   CreateJobDialog,
+  DeliverJobDialog,
   FeedbackDialog,
   OnboardingDialog,
   RegisterAgentDialog,
@@ -31,10 +33,12 @@ import {
   connectFreighter,
   decimalFromStroops,
   getLatestLedgerSequence,
+  loadProtocolSnapshot,
   scVal,
   sha256Hex,
   stroopsFromDecimal,
   submitAgentRailCall,
+  stellarConfig,
   type WalletState,
 } from "@/lib/stellar";
 import type {
@@ -47,15 +51,23 @@ import type {
 
 function App() {
   const [wallet, setWallet] = useState<WalletState | null>(null);
-  const [agents, setAgents] = useState<Agent[]>(sampleAgents);
-  const [jobs, setJobs] = useState<Job[]>(sampleJobs);
+  const [agents, setAgents] = useState<Agent[]>(
+    stellarConfig.demoMode ? sampleAgents : [],
+  );
+  const [jobs, setJobs] = useState<Job[]>(
+    stellarConfig.demoMode ? sampleJobs : [],
+  );
   const [activity, setActivity] = useState<ActivityEvent[]>(initialActivity);
-  const [selectedAgentId, setSelectedAgentId] = useState(sampleAgents[0].id);
+  const [selectedAgentId, setSelectedAgentId] = useState(
+    stellarConfig.demoMode ? sampleAgents[0].id : 0,
+  );
   const [registerForm, setRegisterForm] =
     useState<RegisterForm>(initialRegisterForm);
   const [brief, setBrief] = useState("");
   const [jobAmount, setJobAmount] = useState(
-    decimalFromStroops(sampleAgents[0].priceStroops),
+    stellarConfig.demoMode
+      ? decimalFromStroops(sampleAgents[0].priceStroops)
+      : "0.05",
   );
   const [deadlineLedgers, setDeadlineLedgers] = useState("1200");
   const [busy, setBusy] = useState<string | null>(null);
@@ -65,8 +77,18 @@ function App() {
   const [jobOpen, setJobOpen] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [onboardingOpen, setOnboardingOpen] = useState(false);
+  const [deliverOpen, setDeliverOpen] = useState(false);
+  const [approveOpen, setApproveOpen] = useState(false);
+  const [selectedJob, setSelectedJob] = useState<Job | undefined>();
+  const [deliverable, setDeliverable] = useState("");
+  const [rating, setRating] = useState(5);
+  const [dataMode, setDataMode] = useState<"loading" | "live" | "demo" | "error">(
+    "loading",
+  );
+  const [latestLedger, setLatestLedger] = useState<number | null>(null);
 
   useEffect(() => {
+    void refreshProtocol();
     checkFreighter().then((connected) => {
       setWallet(connected);
       if (connected) recordWalletConnection(connected.address);
@@ -76,6 +98,39 @@ function App() {
       return () => window.clearTimeout(timer);
     }
   }, []);
+
+  async function refreshProtocol() {
+    try {
+      const snapshot = await loadProtocolSnapshot();
+      setAgents(snapshot.agents);
+      setJobs(snapshot.jobs);
+      setLatestLedger(snapshot.ledger);
+      setDataMode("live");
+      setSelectedAgentId((current) => {
+        if (snapshot.agents.some((agent) => agent.id === current)) return current;
+        return snapshot.agents[0]?.id ?? 0;
+      });
+      if (snapshot.agents[0]) {
+        setJobAmount((current) =>
+          current === "0.05"
+            ? decimalFromStroops(snapshot.agents[0].priceStroops)
+            : current,
+        );
+      }
+    } catch (error) {
+      captureProductError(error, { flow: "load_protocol_snapshot" });
+      if (stellarConfig.demoMode) {
+        setAgents(sampleAgents);
+        setJobs(sampleJobs);
+        setSelectedAgentId(sampleAgents[0].id);
+        setDataMode("demo");
+      } else {
+        setAgents([]);
+        setJobs([]);
+        setDataMode("error");
+      }
+    }
+  }
 
   const selectedAgent = agents.find((agent) => agent.id === selectedAgentId);
 
@@ -187,6 +242,7 @@ function App() {
         responseTime: "New",
         successRate: 100,
         verified: true,
+        chainBacked: true,
       };
       setAgents((current) => [nextAgent, ...current]);
       setSelectedAgentId(id);
@@ -201,6 +257,7 @@ function App() {
       });
       setRegisterOpen(false);
       setRegisterForm(initialRegisterForm);
+      await refreshProtocol();
     } catch (error) {
       const message = error instanceof Error ? error.message : "Agent registration failed.";
       captureProductError(error, { flow: "register_agent" });
@@ -224,9 +281,18 @@ function App() {
           `Escrow must be at least ${decimalFromStroops(selectedAgent.priceStroops)} XLM.`,
         );
       }
-      const briefHash = await sha256Hex(
-        `${selectedAgent.handle}:${brief}:${Date.now()}`,
-      );
+      if (!selectedAgent.chainBacked) {
+        throw new Error("Demo listings cannot receive real escrow payments.");
+      }
+      const briefHash = await sha256Hex(brief.trim());
+      const ledgerOffset = Number(deadlineLedgers);
+      if (
+        !Number.isInteger(ledgerOffset) ||
+        ledgerOffset < 100 ||
+        ledgerOffset > 120_960
+      ) {
+        throw new Error("Deadline must be between 100 and 120,960 ledgers.");
+      }
       const currentLedger = await getLatestLedgerSequence();
       const result = await submitAgentRailCall(
         signer.address,
@@ -236,7 +302,7 @@ function App() {
           scVal.u64(selectedAgent.id),
           scVal.bytes32(briefHash),
           scVal.i128(amount),
-          scVal.u32(currentLedger + Number(deadlineLedgers)),
+          scVal.u32(currentLedger + ledgerOffset),
         ],
         setTransactionStage,
       );
@@ -254,6 +320,10 @@ function App() {
         briefHash,
         txHash: result.hash,
         createdAt: new Date().toISOString(),
+        agentOwner: selectedAgent.owner,
+        deadlineLedger: currentLedger + ledgerOffset,
+        createdLedger: currentLedger,
+        chainBacked: true,
       };
       setJobs((current) => [job, ...current]);
       recordWalletTransaction(signer.address, result.hash, "create_job");
@@ -266,6 +336,7 @@ function App() {
       toast.success("Escrow funded on Testnet");
       setJobOpen(false);
       setBrief("");
+      await refreshProtocol();
     } catch (error) {
       const message = error instanceof Error ? error.message : "Escrow funding failed.";
       captureProductError(error, { flow: "create_job" });
@@ -276,32 +347,57 @@ function App() {
     }
   }
 
-  async function handleDeliver(job: Job) {
+  function openDeliver(job: Job) {
+    setSelectedJob(job);
+    setDeliverable("");
+    resetTransaction();
+    setDeliverOpen(true);
+  }
+
+  async function handleDeliver(event: FormEvent) {
+    event.preventDefault();
+    if (!selectedJob) return;
+    const job = selectedJob;
     setBusy(`deliver-${job.id}`);
+    resetTransaction();
     try {
       const signer = requireWallet();
-      const deliverableHash = await sha256Hex(
-        `agentrail:deliverable:${job.id}:${Date.now()}`,
-      );
-      let hash = job.txHash;
-      if (job.txHash) {
-        const result = await submitAgentRailCall(signer.address, "deliver_job", [
+      if (!job.chainBacked) {
+        throw new Error("Demo jobs cannot submit on-chain delivery proofs.");
+      }
+      const deliverableHash = await sha256Hex(deliverable.trim());
+      const result = await submitAgentRailCall(
+        signer.address,
+        "deliver_job",
+        [
           scVal.address(signer.address),
           scVal.u64(job.id),
           scVal.bytes32(deliverableHash),
-        ]);
-        hash = result.hash;
-        recordWalletTransaction(signer.address, result.hash, "deliver_job");
-      }
+        ],
+        setTransactionStage,
+      );
+      recordWalletTransaction(signer.address, result.hash, "deliver_job");
       setJobs((current) =>
         current.map((item) =>
           item.id === job.id
-            ? { ...item, status: "Delivered", deliverableHash, txHash: hash }
+            ? {
+                ...item,
+                status: "Delivered",
+                deliverableHash,
+                txHash: result.hash,
+              }
             : item,
         ),
       );
-      pushActivity("Deliverable submitted", `Job #${job.id} is ready for approval.`, "success", hash);
+      pushActivity(
+        "Deliverable submitted",
+        `Job #${job.id} is ready for approval.`,
+        "success",
+        result.hash,
+      );
       toast.success("Deliverable proof recorded");
+      setDeliverOpen(false);
+      await refreshProtocol();
     } catch (error) {
       const message = error instanceof Error ? error.message : "Delivery failed.";
       captureProductError(error, { flow: "deliver_job", jobId: job.id });
@@ -312,24 +408,44 @@ function App() {
     }
   }
 
-  async function handleApprove(job: Job) {
+  function openApprove(job: Job) {
+    setSelectedJob(job);
+    setRating(5);
+    resetTransaction();
+    setApproveOpen(true);
+  }
+
+  async function handleApprove(event: FormEvent) {
+    event.preventDefault();
+    if (!selectedJob) return;
+    const job = selectedJob;
     setBusy(`approve-${job.id}`);
+    resetTransaction();
     try {
       const signer = requireWallet();
-      let hash = job.txHash;
-      if (job.txHash) {
-        const result = await submitAgentRailCall(signer.address, "approve_job", [
+      if (!job.chainBacked) {
+        throw new Error("Demo jobs cannot release real escrow.");
+      }
+      const result = await submitAgentRailCall(
+        signer.address,
+        "approve_job",
+        [
           scVal.address(signer.address),
           scVal.u64(job.id),
-          scVal.u32(5),
-        ]);
-        hash = result.hash;
-        recordWalletTransaction(signer.address, result.hash, "approve_job");
-      }
+          scVal.u32(rating),
+        ],
+        setTransactionStage,
+      );
+      recordWalletTransaction(signer.address, result.hash, "approve_job");
       setJobs((current) =>
         current.map((item) =>
           item.id === job.id
-            ? { ...item, status: "Released", rating: 5, txHash: hash }
+            ? {
+                ...item,
+                status: "Released",
+                rating,
+                txHash: result.hash,
+              }
             : item,
         ),
       );
@@ -340,13 +456,21 @@ function App() {
                 ...agent,
                 completed: agent.completed + 1,
                 rating:
-                  (agent.rating * agent.completed + 5) / (agent.completed + 1),
+                  (agent.rating * agent.completed + rating) /
+                  (agent.completed + 1),
               }
             : agent,
         ),
       );
-      pushActivity("Payment released", `Job #${job.id} settled with a 5-star rating.`, "success", hash);
+      pushActivity(
+        "Payment released",
+        `Job #${job.id} settled with a ${rating}-star rating.`,
+        "success",
+        result.hash,
+      );
       toast.success("Payment released to agent");
+      setApproveOpen(false);
+      await refreshProtocol();
       window.setTimeout(() => setFeedbackOpen(true), 600);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Approval failed.";
@@ -363,6 +487,12 @@ function App() {
     setJobAmount(decimalFromStroops(agent.priceStroops));
     trackEvent("agent_selected", { agentId: agent.id, handle: agent.handle });
     if (openJob) {
+      if (!agent.chainBacked) {
+        toast.error("Demo listing", {
+          description: "Enable a live contract listing before funding escrow.",
+        });
+        return;
+      }
       resetTransaction();
       setJobOpen(true);
     }
@@ -379,22 +509,30 @@ function App() {
         <AppShell
         wallet={wallet}
         connecting={busy === "wallet"}
+        jobCount={jobs.length}
         onConnect={handleConnect}
         onOpenOnboarding={() => setOnboardingOpen(true)}
       >
-        <DashboardOverview
-          stats={stats}
-          onRegisterAgent={() => {
-            resetTransaction();
-            setRegisterOpen(true);
-          }}
-          onCreateJob={() => {
-            resetTransaction();
-            setJobOpen(true);
-          }}
-        />
+        <div id="overview" className="scroll-mt-20">
+          <DashboardOverview
+            stats={stats}
+            dataMode={dataMode}
+            latestLedger={latestLedger}
+            onRegisterAgent={() => {
+              resetTransaction();
+              setRegisterOpen(true);
+            }}
+            onCreateJob={() => {
+              resetTransaction();
+              setJobOpen(true);
+            }}
+          />
+        </div>
 
-        <section className="mt-3 grid gap-3 xl:grid-cols-[1.55fr_.45fr]">
+        <section
+          id="marketplace"
+          className="mt-3 grid scroll-mt-20 gap-3 xl:grid-cols-[1.55fr_.45fr]"
+        >
           <Marketplace
             agents={agents}
             selectedAgentId={selectedAgentId}
@@ -412,6 +550,14 @@ function App() {
               Briefs and deliverables remain private while their SHA-256 proofs create an
               immutable audit trail on Stellar.
             </p>
+            <div className="mt-4 rounded-lg border border-white/[.06] bg-slate-950/40 p-3 text-[10px] text-slate-500">
+              {dataMode === "loading" && "Loading verified contract state…"}
+              {dataMode === "live" &&
+                `Live contract state · ledger ${latestLedger ?? "—"}`}
+              {dataMode === "demo" && "Demo mode · transactions are disabled"}
+              {dataMode === "error" &&
+                "Contract state unavailable · check RPC configuration"}
+            </div>
             <div className="mt-6 grid gap-3">
               {[
                 ["Buyer-controlled release", "Funds move only after explicit approval."],
@@ -432,18 +578,22 @@ function App() {
           </aside>
         </section>
 
-        <div className="mt-3">
+        <div id="jobs" className="mt-3 scroll-mt-20">
           <JobActivity
             jobs={jobs}
             agents={agents}
             events={activity}
             busy={busy}
-            onDeliver={handleDeliver}
-            onApprove={handleApprove}
+            walletAddress={wallet?.address}
+            onDeliver={openDeliver}
+            onApprove={openApprove}
           />
         </div>
 
-        <footer className="mt-6 flex flex-col gap-3 border-t border-white/[.06] py-5 text-[11px] text-slate-600 sm:flex-row sm:items-center sm:justify-between">
+        <footer
+          id="validation"
+          className="mt-6 flex scroll-mt-20 flex-col gap-3 border-t border-white/[.06] py-5 text-[11px] text-slate-600 sm:flex-row sm:items-center sm:justify-between"
+        >
           <span>AgentRail · Stellar Testnet · Non-custodial escrow protocol</span>
           <Button variant="ghost" size="sm" onClick={() => setFeedbackOpen(true)}>
             <MessageSquareText size={13} />
@@ -478,6 +628,24 @@ function App() {
         onOpenChange={closeOnboarding}
         walletConnected={Boolean(wallet)}
         onConnect={handleConnect}
+      />
+      <DeliverJobDialog
+        open={deliverOpen}
+        onOpenChange={setDeliverOpen}
+        job={selectedJob}
+        deliverable={deliverable}
+        onDeliverableChange={setDeliverable}
+        onSubmit={handleDeliver}
+        stage={transactionStage}
+      />
+      <ApproveJobDialog
+        open={approveOpen}
+        onOpenChange={setApproveOpen}
+        job={selectedJob}
+        rating={rating}
+        onRatingChange={setRating}
+        onSubmit={handleApprove}
+        stage={transactionStage}
       />
       <FeedbackDialog
         open={feedbackOpen}

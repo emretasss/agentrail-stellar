@@ -2,8 +2,8 @@ import {
   ArrowUpRight,
   BadgeCheck,
   Bot,
-  CheckCircle2,
-  Clock3,
+  BriefcaseBusiness,
+  CircleDollarSign,
   Search,
   Star,
   Zap,
@@ -116,17 +116,19 @@ export function Marketplace({
                 </div>
                 <div className="px-3">
                   <span className="flex items-center gap-1 text-[9px] uppercase tracking-wider text-slate-600">
-                    <Clock3 size={9} />
-                    Response
+                    <BriefcaseBusiness size={9} />
+                    Completed
                   </span>
-                  <strong className="mt-1 block text-xs text-slate-300">{agent.responseTime}</strong>
+                  <strong className="mt-1 block text-xs text-slate-300">{agent.completed}</strong>
                 </div>
                 <div className="px-3">
                   <span className="flex items-center gap-1 text-[9px] uppercase tracking-wider text-slate-600">
-                    <CheckCircle2 size={9} />
-                    Success
+                    <CircleDollarSign size={9} />
+                    Price
                   </span>
-                  <strong className="mt-1 block text-xs text-slate-300">{agent.successRate}%</strong>
+                  <strong className="mt-1 block text-xs text-slate-300">
+                    {decimalFromStroops(agent.priceStroops)}
+                  </strong>
                 </div>
               </div>
 

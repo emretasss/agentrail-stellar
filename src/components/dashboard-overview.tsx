@@ -1,6 +1,4 @@
 import {
-  ArrowDownRight,
-  ArrowUpRight,
   Bot,
   CircleDollarSign,
   Clock3,
@@ -9,19 +7,9 @@ import {
   ShieldCheck,
   Sparkles,
 } from "lucide-react";
-import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip as ChartTooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { volumeSeries } from "@/data/demo";
 
 type Stats = {
   agents: number;
@@ -35,45 +23,47 @@ const metricStyle = [
     key: "locked" as const,
     label: "Value in escrow",
     suffix: " XLM",
-    change: "+18.2%",
     icon: LockKeyhole,
-    up: true,
   },
   {
     key: "released" as const,
     label: "Settled volume",
     suffix: " XLM",
-    change: "+24.8%",
     icon: CircleDollarSign,
-    up: true,
   },
   {
     key: "jobs" as const,
     label: "Total jobs",
     suffix: "",
-    change: "+12.4%",
     icon: Clock3,
-    up: true,
   },
   {
     key: "agents" as const,
     label: "Active agents",
     suffix: "",
-    change: "0.8%",
     icon: Bot,
-    up: false,
   },
 ];
 
 export function DashboardOverview({
   stats,
+  dataMode,
+  latestLedger,
   onCreateJob,
   onRegisterAgent,
 }: {
   stats: Stats;
+  dataMode: "loading" | "live" | "demo" | "error";
+  latestLedger: number | null;
   onCreateJob: () => void;
   onRegisterAgent: () => void;
 }) {
+  const lifecycle = [
+    { label: "Registered agents", value: stats.agents, icon: Bot },
+    { label: "Jobs created", value: stats.jobs, icon: Clock3 },
+    { label: "XLM settled", value: stats.released, icon: CircleDollarSign },
+  ];
+
   return (
     <>
       <section className="mb-6 flex flex-col justify-between gap-4 xl:flex-row xl:items-end">
@@ -103,7 +93,7 @@ export function DashboardOverview({
       </section>
 
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {metricStyle.map(({ key, label, suffix, change, icon: Icon, up }) => (
+        {metricStyle.map(({ key, label, suffix, icon: Icon }) => (
           <Card key={key} className="group overflow-hidden">
             <CardContent className="relative p-4">
               <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-emerald-400/30 to-transparent opacity-0 transition group-hover:opacity-100" />
@@ -119,13 +109,9 @@ export function DashboardOverview({
                   <Icon size={15} />
                 </span>
               </div>
-              <div className="mt-3 flex items-center gap-1 text-[11px]">
-                <span className={up ? "text-emerald-400" : "text-amber-300"}>
-                  {up ? <ArrowUpRight className="inline" size={12} /> : <ArrowDownRight className="inline" size={12} />}
-                  {change}
-                </span>
-                <span className="text-slate-600">vs. last week</span>
-              </div>
+              <p className="mt-3 text-[11px] text-slate-600">
+                {dataMode === "live" ? "Verified contract state" : "Current workspace state"}
+              </p>
             </CardContent>
           </Card>
         ))}
@@ -135,50 +121,37 @@ export function DashboardOverview({
         <Card>
           <CardHeader className="flex-row items-center justify-between">
             <div>
-              <CardTitle className="text-sm">Protocol activity</CardTitle>
-              <p className="mt-1 text-xs text-slate-600">Escrow volume · trailing 7 days</p>
+              <CardTitle className="text-sm">Protocol lifecycle</CardTitle>
+              <p className="mt-1 text-xs text-slate-600">
+                Current aggregate state from the AgentRail contract
+              </p>
             </div>
-            <Badge variant="secondary">7D</Badge>
+            <Badge variant={dataMode === "live" ? "default" : "secondary"}>
+              {dataMode === "live" ? "Live" : dataMode}
+            </Badge>
           </CardHeader>
-          <CardContent className="h-[218px] px-2 pb-2 sm:px-4">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={volumeSeries} margin={{ top: 8, right: 10, left: -22, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="volumeFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#34d399" stopOpacity={0.25} />
-                    <stop offset="100%" stopColor="#34d399" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid stroke="rgba(255,255,255,.045)" vertical={false} />
-                <XAxis
-                  dataKey="day"
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: "#475569", fontSize: 10 }}
-                />
-                <YAxis
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: "#475569", fontSize: 10 }}
-                />
-                <ChartTooltip
-                  contentStyle={{
-                    background: "#0f172a",
-                    border: "1px solid rgba(255,255,255,.1)",
-                    borderRadius: 8,
-                    fontSize: 12,
-                  }}
-                  formatter={(value) => [`${value} XLM`, "Volume"]}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="volume"
-                  stroke="#34d399"
-                  strokeWidth={2}
-                  fill="url(#volumeFill)"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
+          <CardContent className="grid min-h-[218px] gap-3 p-4 sm:grid-cols-3">
+            {lifecycle.map(({ label, value, icon: Icon }, index) => (
+              <div
+                key={label}
+                className="relative flex min-h-36 flex-col justify-between overflow-hidden rounded-xl border border-white/[.06] bg-white/[.02] p-4"
+              >
+                <span className="grid size-8 place-items-center rounded-lg bg-emerald-400/[.08] text-emerald-300">
+                  <Icon size={15} />
+                </span>
+                <div>
+                  <strong className="block text-2xl font-semibold tracking-tight text-slate-100">
+                    {value}
+                  </strong>
+                  <span className="mt-1 block text-[11px] text-slate-600">{label}</span>
+                </div>
+                {index < lifecycle.length - 1 && (
+                  <span className="absolute right-2 top-1/2 hidden text-slate-800 sm:block">
+                    →
+                  </span>
+                )}
+              </div>
+            ))}
           </CardContent>
         </Card>
 
@@ -189,20 +162,24 @@ export function DashboardOverview({
               <span className="grid size-9 place-items-center rounded-lg bg-emerald-400/10 text-emerald-300">
                 <ShieldCheck size={18} />
               </span>
-              <Badge>Operational</Badge>
+              <Badge variant={dataMode === "live" ? "default" : "secondary"}>
+                {dataMode === "live" ? "Operational" : "Checking"}
+              </Badge>
             </div>
             <div className="relative mt-auto">
               <p className="text-xs font-medium uppercase tracking-[.16em] text-slate-600">
                 Network assurance
               </p>
-              <p className="mt-2 text-xl font-semibold text-slate-100">All systems nominal</p>
+              <p className="mt-2 text-xl font-semibold text-slate-100">
+                {dataMode === "live" ? "Contract state verified" : "Connecting to Testnet"}
+              </p>
               <p className="mt-2 text-xs leading-5 text-slate-500">
                 Contract reachable, signing network verified, and confirmation polling active.
               </p>
               <div className="mt-5 grid grid-cols-3 gap-2">
                 {[
-                  ["RPC", "99.98%"],
-                  ["Finality", "~5s"],
+                  ["RPC", dataMode === "live" ? "Connected" : "Checking"],
+                  ["Ledger", latestLedger?.toLocaleString() ?? "—"],
                   ["Network", "Testnet"],
                 ].map(([label, value]) => (
                   <div key={label} className="rounded-lg border border-white/[.06] bg-white/[.025] p-2">

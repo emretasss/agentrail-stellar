@@ -1,5 +1,4 @@
 import {
-  ArrowRight,
   Check,
   CheckCircle2,
   CircleDot,
@@ -27,6 +26,7 @@ export function JobActivity({
   agents,
   events,
   busy,
+  walletAddress,
   onDeliver,
   onApprove,
 }: {
@@ -34,6 +34,7 @@ export function JobActivity({
   agents: Agent[];
   events: ActivityEvent[];
   busy: string | null;
+  walletAddress?: string;
   onDeliver: (job: Job) => void;
   onApprove: (job: Job) => void;
 }) {
@@ -61,6 +62,14 @@ export function JobActivity({
             <tbody>
               {jobs.map((job) => {
                 const agent = agents.find((entry) => entry.id === job.agentId);
+                const canDeliver =
+                  job.status === "Funded" &&
+                  Boolean(walletAddress) &&
+                  agent?.owner === walletAddress;
+                const canApprove =
+                  job.status === "Delivered" &&
+                  Boolean(walletAddress) &&
+                  job.payer === walletAddress;
                 return (
                   <tr key={job.id} className="border-b border-white/[.045] text-xs last:border-0">
                     <td className="px-5 py-3.5">
@@ -82,7 +91,7 @@ export function JobActivity({
                       </Badge>
                     </td>
                     <td className="px-5 py-3.5 text-right">
-                      {job.status === "Funded" && (
+                      {canDeliver && (
                         <Button
                           size="sm"
                           variant="outline"
@@ -93,7 +102,7 @@ export function JobActivity({
                           Deliver
                         </Button>
                       )}
-                      {job.status === "Delivered" && (
+                      {canApprove && (
                         <Button
                           size="sm"
                           disabled={busy === `approve-${job.id}`}
@@ -102,6 +111,12 @@ export function JobActivity({
                           <Check size={13} />
                           Release
                         </Button>
+                      )}
+                      {job.status === "Funded" && !canDeliver && (
+                        <span className="text-[10px] text-slate-600">Agent action</span>
+                      )}
+                      {job.status === "Delivered" && !canApprove && (
+                        <span className="text-[10px] text-slate-600">Buyer action</span>
                       )}
                       {job.txHash && job.status !== "Delivered" && job.status !== "Funded" && (
                         <Button asChild size="sm" variant="ghost">
@@ -123,7 +138,7 @@ export function JobActivity({
         </CardContent>
       </Card>
 
-      <Card>
+      <Card id="activity" className="scroll-mt-20">
         <CardHeader>
           <CardTitle className="text-sm">Live activity</CardTitle>
           <p className="text-xs text-slate-600">Local product and on-chain events</p>
@@ -155,9 +170,9 @@ export function JobActivity({
               </div>
             </div>
           ))}
-          <button className="mt-1 flex items-center gap-1 text-[11px] text-slate-500 transition hover:text-emerald-400">
-            View full activity <ArrowRight size={12} />
-          </button>
+          <p className="mt-1 text-[10px] text-slate-700">
+            Showing {Math.min(events.length, 5)} of {events.length} recorded events
+          </p>
         </CardContent>
       </Card>
     </section>

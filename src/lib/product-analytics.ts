@@ -52,7 +52,7 @@ export function recordWalletConnection(address: string) {
     });
     writeJson(EVIDENCE_KEY, records);
   }
-  trackEvent("wallet_connected", { wallet: `${address.slice(0, 6)}…${address.slice(-4)}` });
+  trackEvent("wallet_connected");
 }
 
 export function recordWalletTransaction(
@@ -77,7 +77,7 @@ export function recordWalletTransaction(
     });
   }
   writeJson(EVIDENCE_KEY, records);
-  trackEvent("transaction_confirmed", { action, hash });
+  trackEvent("transaction_confirmed", { action });
 }
 
 export function saveFeedback(feedback: Feedback) {
