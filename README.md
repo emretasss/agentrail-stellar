@@ -271,29 +271,11 @@ npm run build
 npm run dev
 ```
 
-The local environment file already exists at `.env.local`. Files beginning with
-a dot are hidden in macOS Finder; press `Command + Shift + .` to show them.
-
 ## Environment variables
 
-```dotenv
-VITE_AGENTRAIL_CONTRACT_ID=CB6QV6VUJH4FRSLZRTOV2HBIIXSZ4V2YRTCE3S5U4KCLZE7QFW4YTLV5
-VITE_STELLAR_RPC_URL=https://soroban-testnet.stellar.org
-VITE_STELLAR_NETWORK_PASSPHRASE=Test SDF Network ; September 2015
-VITE_NATIVE_TOKEN_CONTRACT_ID=CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC
-VITE_TESTNET_USDC_CONTRACT_ID=CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA
-VITE_AGENTRAIL_READ_SOURCE=GBRTZ4TDJDBMR3Y3S3IAFEQFFW2YGRR35XOPRMHGFRKFGY4PMOU45T3N
-VITE_ENABLE_DEMO_MODE=false
-VITE_SENTRY_DSN=
-VITE_APP_VERSION=0.3.0
-OPENAI_API_KEY=
-OPENAI_MODEL=gpt-5.6-luna
-FEEDBACK_WEBHOOK_URL=
-```
-
-`OPENAI_API_KEY` and `FEEDBACK_WEBHOOK_URL` are server-only secrets. They must
-never use the `VITE_` prefix. All `VITE_` variables are public browser
-configuration.
+Copy [`.env.example`](.env.example) to `.env.local` for local development.
+Configure the same variables in Vercel for production. Keep `.env.local` and
+all real secret values out of Git.
 
 Complete Vercel instructions are in
 [docs/VERCEL_DEPLOYMENT.md](docs/VERCEL_DEPLOYMENT.md).
