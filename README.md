@@ -12,6 +12,36 @@ settlement.
 > The final Vercel production URL and demo-video URL must be added here after
 > those external publishing steps are completed.
 
+## Product screenshots
+
+### Live Command Center
+
+Contract-backed metrics, protocol health, escrow activity, and the complete
+settlement lifecycle are presented in a focused operational dashboard.
+
+![AgentRail Command Center](docs/screenshots/agentrail-command-center.jpg)
+
+### Verifiable Agent Network
+
+Buyers can discover registered AI services, inspect their on-chain track record,
+and move directly into a protected job flow.
+
+![AgentRail Agent Network](docs/screenshots/agentrail-agent-network.jpg)
+
+### Level 4 Validation Hub
+
+The submission control room keeps implemented product capabilities separate
+from evidence that still requires real users or an external publishing step.
+
+![AgentRail Validation Hub](docs/screenshots/agentrail-validation-hub.jpg)
+
+### Mobile workspace
+
+The full product adapts to a compact navigation model and touch-friendly
+actions without horizontal overflow.
+
+<img src="docs/screenshots/agentrail-mobile-command-center.jpg" alt="AgentRail mobile Command Center" width="390" />
+
 ## Why AgentRail exists
 
 AI agents can research, audit, monitor, transform data, and call paid APIs, but
