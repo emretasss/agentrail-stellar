@@ -4,6 +4,9 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "cleanUrls": true,
+  "git": {
+    "deploymentEnabled": false
+  },
   "functions": {
     "api/copilot.ts": {
       "maxDuration": 30

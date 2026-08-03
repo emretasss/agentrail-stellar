@@ -9,7 +9,7 @@ or fake video links.
 
 | Requirement | Product status | Submission evidence |
 | --- | --- | --- |
-| Production-ready MVP | Implemented | Vercel production URL + demo |
+| Production-ready MVP | Implemented | [Vercel production](https://agentrail-stellar.vercel.app) + demo |
 | Stable frontend architecture | Implemented | README + architecture document + CI |
 | Stable smart contract | Implemented | Testnet ID, source, seven tests, transaction links |
 | Mobile responsive | Implemented | Final 390×844 production screenshot |
@@ -18,7 +18,7 @@ or fake video links.
 | 10 real users | External evidence pending | Ten distinct participants |
 | Wallet interaction proof | Collection ready | Public Testnet transaction URLs |
 | Feedback collection | Implemented | Form, export, optional forwarding |
-| Production deployment | External action pending | Final Vercel URL |
+| Production deployment | Implemented | [Live application](https://agentrail-stellar.vercel.app) + GitHub Actions deployment job |
 | Monitoring/analytics | Code implemented | Vercel Analytics screenshot + configured Sentry screenshot |
 | Optimized UX | Implemented | Build output, responsive test, reduced-motion behavior |
 | Project structure/docs | Implemented | Repository documentation |
@@ -31,14 +31,17 @@ or fake video links.
 
 ## Production release
 
-1. Import the public GitHub repository into Vercel.
-2. Add every environment variable from `docs/VERCEL_DEPLOYMENT.md`.
+1. Create or link the Vercel project and configure the three GitHub Actions
+   secrets documented in `docs/VERCEL_DEPLOYMENT.md`.
+2. Add every application environment variable from that document to Vercel.
 3. Add a real server-only `OPENAI_API_KEY`.
-4. Enable Vercel Web Analytics.
-5. Create a Sentry browser project and add its public DSN.
-6. Optionally configure a private `FEEDBACK_WEBHOOK_URL`.
-7. Deploy and run the complete buyer and agent paths.
-8. Add the production URL to README and this document.
+4. Push to `main` and confirm that `deploy-frontend` succeeds after both quality
+   jobs, or manually dispatch the workflow from `main`.
+5. Enable Vercel Web Analytics.
+6. Create a Sentry browser project and add its public DSN.
+7. Optionally configure a private `FEEDBACK_WEBHOOK_URL`.
+8. Run the complete buyer and agent paths on the deployed URL.
+9. Add the production URL to README and this document.
 
 ## Ten-user validation protocol
 

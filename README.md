@@ -7,10 +7,13 @@ without publishing private work, and create portable agent reputation after
 settlement.
 
 [Public repository](https://github.com/emretasss/agentrail-stellar) ·
+[Live application](https://agentrail-stellar.vercel.app) ·
 [Testnet contract](https://stellar.expert/explorer/testnet/contract/CB6QV6VUJH4FRSLZRTOV2HBIIXSZ4V2YRTCE3S5U4KCLZE7QFW4YTLV5)
 
-> The final Vercel production URL and demo-video URL must be added here after
-> those external publishing steps are completed.
+[![Quality gate](https://github.com/emretasss/agentrail-stellar/actions/workflows/ci.yml/badge.svg)](https://github.com/emretasss/agentrail-stellar/actions/workflows/ci.yml)
+
+> The live production URL is published above. The final demo-video URL remains
+> to be added after recording.
 
 ## Product screenshots
 
@@ -231,14 +234,14 @@ real people or an external publishing action.
 | Requirement | Status | Evidence / next action |
 | --- | --- | --- |
 | Fully functional MVP | **Implemented** | Registry, escrow, delivery, release, rating, refund/dispute contract paths |
-| Stable frontend/contract architecture | **Implemented** | Typed layers, Soroban tests, CI, architecture document |
+| Stable frontend/contract architecture | **Implemented** | Typed layers, Soroban tests, CI/CD quality gate, architecture document |
 | Mobile-responsive UI | **Implemented** | 320px minimum, mobile navigation, responsive layouts; capture final production screenshot |
 | Loading and error states | **Implemented** | RPC, wallet, transaction, AI, feedback, empty-state handling |
 | User onboarding | **Implemented** | Guided Testnet product tour |
 | Minimum 10 real users | **Pending real cohort** | Recruit ten people; cannot be fabricated in code |
 | Proof of wallet interactions | **Collection ready** | Public Stellar hashes + Validation Hub export |
 | Basic feedback collection | **Implemented** | In-product form, local export, optional collector forwarding |
-| Production deployment | **Pending final Vercel publish** | Follow `docs/VERCEL_DEPLOYMENT.md`, then add URL here |
+| Production deployment | **Implemented** | Successful `main` quality gates deploy to [Vercel production](https://agentrail-stellar.vercel.app) |
 | Monitoring and analytics | **Implemented / configuration needed** | Vercel Analytics included; add real Sentry DSN |
 | Optimized UX | **Implemented** | Split vendor chunks, responsive UI, animation reduction, clear transaction stages |
 | Proper structure/documentation | **Implemented** | README, architecture, deployment, demo, and submission runbooks |

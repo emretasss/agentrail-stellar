@@ -1,7 +1,30 @@
 # Vercel Deployment
 
-Import `github.com/emretasss/agentrail-stellar` into Vercel. Vercel detects the
-Vite framework from `vercel.json`.
+Production URL: <https://agentrail-stellar.vercel.app>
+
+The production frontend is deployed by the `deploy-frontend` job in
+`.github/workflows/ci.yml`. The job runs only for `main` pushes or a manual
+workflow dispatch from `main`, and only after both frontend and contract quality
+jobs pass. Vercel detects the Vite framework from `vercel.json`.
+
+## One-time CI/CD setup
+
+1. Create or link the `agentrail-stellar` project in Vercel.
+2. Read `orgId` and `projectId` from the generated `.vercel/project.json` file.
+3. Create a Vercel access token.
+4. Add these GitHub Actions repository or `production` environment secrets:
+
+   - `VERCEL_TOKEN`
+   - `VERCEL_ORG_ID`
+   - `VERCEL_PROJECT_ID`
+
+5. Add the application variables below to the Vercel Production environment.
+6. Push to `main`, or run the `Quality gate` workflow manually from `main`.
+
+The deployment job records the resulting URL on the GitHub production
+environment and in the workflow summary. Native Vercel Git deployments are
+disabled by `git.deploymentEnabled: false` in `vercel.json`, so GitHub Actions
+is the single production deployment path.
 
 ## Environment variables
 
@@ -39,8 +62,8 @@ credential in those variables.
 - Output directory: `dist`
 - Node.js: 22.x
 
-After deployment, enable Vercel Web Analytics in the project dashboard. The app
-already includes `@vercel/analytics`. Then test:
+After the first successful CD run, enable Vercel Web Analytics in the project
+dashboard. The app already includes `@vercel/analytics`. Then test:
 
 1. `/api/copilot` through the Mission Copilot screen.
 2. Contract state loading on Command Center.

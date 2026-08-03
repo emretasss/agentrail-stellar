@@ -4,6 +4,7 @@ on:
   push:
     branches: ["main"]
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -32,3 +33,41 @@ jobs:
       - run: cargo fmt --all -- --check
       - run: cargo test
       - run: cargo build --release --target wasm32v1-none -p agent-pay
+
+  deploy-frontend:
+    name: Deploy frontend to Vercel
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    needs: [frontend, contract]
+    runs-on: ubuntu-latest
+    concurrency:
+      group: vercel-production
+      cancel-in-progress: true
+    environment:
+      name: production
+      url: ${{ steps.deploy.outputs.url }}
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Install Vercel CLI
+        run: npm install --global vercel@58.4.4
+      - name: Pull production environment
+        run: vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
+      - name: Build Vercel artifacts
+        run: vercel build --prod --token="$VERCEL_TOKEN"
+      - name: Deploy production artifacts
+        id: deploy
+        shell: bash
+        run: |
+          deployment_url="$(vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN")"
+          echo "url=${deployment_url}" >> "$GITHUB_OUTPUT"
+          echo "### Production deployment" >> "$GITHUB_STEP_SUMMARY"
+          echo "${deployment_url}" >> "$GITHUB_STEP_SUMMARY"
