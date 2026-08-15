@@ -45,7 +45,7 @@ Use prepared wallets to demonstrate:
 Keep the prepare, sign, submit, and confirm states visible. Explain that only
 SHA-256 proofs enter contract storage.
 
-## 2:15–2:40 — Engineering quality
+## 2:15–2:30 — Engineering quality
 
 Show:
 
@@ -57,10 +57,19 @@ Show:
 - configured Sentry project;
 - public architecture document.
 
-## 2:40–3:00 — Real-user validation
+## 2:30–2:50 — Growth Lab proof verification
 
-Open Validation Hub. Show ten real wallet interactions, feedback totals, and the
-exported evidence report. End on:
+Open Growth Lab, select a real participant role and mission, paste the completed
+transaction hash, and show Horizon verifying transaction success, the wallet,
+the AgentRail contract invocation, function name, and ledger. Copy the referral
+link and open the participant feedback form.
+
+## 2:50–3:00 — Level 5 growth evidence
+
+Open Validation Hub. Show 50 verified wallet interactions, the published Google
+Form, feedback totals, the Excel evidence dashboard, and the exported response
+sheet. Do not record this segment until the cohort is genuinely complete. End
+on:
 
 - production URL;
 - public repository;
@@ -74,4 +83,10 @@ exported evidence report. End on:
 - Mission Copilot shows “OpenAI generated,” not local-template fallback.
 - Sentry and Vercel Analytics screenshots contain real production data.
 - The final interaction links open successfully in an incognito browser.
-- The video URL is added to README and `docs/LEVEL4_SUBMISSION.md`.
+- Growth Lab accepts a real AgentRail hash and rejects a non-contract Testnet hash.
+- No participant email address or secret wallet material is visible.
+- The video URL is added to README and `docs/LEVEL5_SUBMISSION.md`.
+
+The repository includes a concise visual walkthrough at
+[`docs/demo/AgentRail-Level5-Demo.webm`](demo/AgentRail-Level5-Demo.webm). It
+does not replace the final signed-wallet cohort demo described above.

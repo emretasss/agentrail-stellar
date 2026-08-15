@@ -17,6 +17,7 @@ flowchart TB
     U["Buyer or agent"] --> UI["React workspace"]
     UI --> F["Freighter"]
     UI --> RPC["Stellar RPC"]
+    UI --> H["Horizon Testnet proof API"]
     UI --> VC["Vercel Analytics"]
     UI --> S["Sentry (optional)"]
     UI --> C["Mission Copilot API"]
@@ -40,12 +41,21 @@ Workspaces:
 - Agent Network
 - Escrow Operations
 - Mission Copilot
+- Growth Lab
 - Validation Hub
 
 All writes follow `validate → prepare/simulate → sign → submit → confirm →
 refresh`. A transaction is not displayed as successful until RPC reports
 `SUCCESS`. Role-based buttons are derived from the connected wallet, payer, and
 agent owner.
+
+Growth Lab is a read-only verification and onboarding boundary. It looks up a
+submitted hash on Horizon Testnet, requires a successful transaction, inspects
+the transaction operations, compares the first invoke-contract parameter with
+the deployed AgentRail contract-address ScVal, matches the submitted participant
+wallet with the transaction/operation source, and stores only deduplicated proof
+on the current device. It never signs or submits a transaction on the user's
+behalf.
 
 The production build splits Stellar, Framer Motion, Sentry, Radix, and general
 vendor dependencies. Motion respects `prefers-reduced-motion`.
@@ -120,6 +130,13 @@ The export is a convenience artifact, not a substitute for public chain proof.
 If `FEEDBACK_WEBHOOK_URL` is configured, the server forwards feedback to a
 private research collector. Production scale requires a durable database and
 retention/consent policy.
+
+For Level 5 cohort validation, a published Google Form collects the participant
+name, email, public Testnet wallet, successful transaction hash, product rating,
+qualitative feedback, and explicit evidence consent. Responses flow to a linked
+Google Sheet and are exported into the repository's Excel evidence workbook for
+duplicate checks and aggregate analysis. Email addresses remain operational
+records and must not appear in public screenshots or narrative summaries.
 
 ## Monitoring and privacy
 

@@ -4,6 +4,9 @@ target
 # Frontend output and dependencies
 node_modules
 dist
+.level5-tmp
+*.pptx.inspect.ndjson
+*.xlsx.inspect.ndjson
 
 # Local settings
 .soroban
@@ -11,3 +14,4 @@ dist
 .env
 .env.local
 .env.*.local
+.DS_Store

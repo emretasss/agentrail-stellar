@@ -8,14 +8,26 @@ settlement.
 
 [Public repository](https://github.com/emretasss/agentrail-stellar) ·
 [Live application](https://agentrail-stellar.vercel.app) ·
-[Testnet contract](https://stellar.expert/explorer/testnet/contract/CB6QV6VUJH4FRSLZRTOV2HBIIXSZ4V2YRTCE3S5U4KCLZE7QFW4YTLV5)
+[Testnet contract](https://stellar.expert/explorer/testnet/contract/CB6QV6VUJH4FRSLZRTOV2HBIIXSZ4V2YRTCE3S5U4KCLZE7QFW4YTLV5) ·
+[Level 5 feedback form](https://docs.google.com/forms/d/e/1FAIpQLSfWWZxgMNLxVi7SHGKc9Y-Q66d5Dy4KHZSi72fKTtWPUFhX2A/viewform) ·
+[Pitch deck](docs/pitch/AgentRail-Level5-Pitch-Deck.pptx) ·
+[Demo recording](docs/demo/AgentRail-Level5-Demo.webm) ·
+[User evidence workbook](docs/evidence/AgentRail-Level5-User-Evidence.xlsx)
 
 [![Quality gate](https://github.com/emretasss/agentrail-stellar/actions/workflows/ci.yml/badge.svg)](https://github.com/emretasss/agentrail-stellar/actions/workflows/ci.yml)
 
-> The live production URL is published above. The final demo-video URL remains
-> to be added after recording.
+> Level 5 submission assets are repository-hosted so reviewers can download the
+> exact PPTX, WebM, Excel workbook, and transaction-activity screenshot.
 
 ## Product screenshots
+
+### Growth Lab — verifiable Testnet onboarding
+
+The v0.4 Growth Lab turns onboarding into a measurable quest: participants
+choose a role and mission, verify a successful AgentRail transaction through
+Horizon, submit feedback, and invite the next tester.
+
+![AgentRail Growth Lab](docs/screenshots/agentrail-growth-lab.png)
 
 ### Live Command Center
 
@@ -31,7 +43,7 @@ and move directly into a protected job flow.
 
 ![AgentRail Agent Network](docs/screenshots/agentrail-agent-network.jpg)
 
-### Level 4 Validation Hub
+### Level 5 Validation Hub
 
 The submission control room keeps implemented product capabilities separate
 from evidence that still requires real users or an external publishing step.
@@ -71,6 +83,12 @@ AgentRail addresses those gaps with four connected layers:
    on-chain profile. Brief and delivery content remain off-chain while their
    SHA-256 proofs provide an immutable audit trail.
 
+Level 5 adds a fifth growth layer: **Growth Lab** turns onboarding into a
+role-based Testnet quest, verifies submitted transaction hashes directly with
+Horizon, checks that the transaction invoked the deployed AgentRail contract,
+matches the participant wallet, records deduplicated local proof, generates a
+referral link, and routes the participant into the published feedback form.
+
 ## Product workspace
 
 AgentRail is organized as a responsive multi-view product rather than one long
@@ -82,7 +100,8 @@ landing page:
 | **Agent Network** | Search, compare, inspect, and hire contract-backed agents |
 | **Escrow Operations** | Follow funded, delivered, released, refunded, and disputed jobs |
 | **Mission Copilot** | Generate an escrow-ready work scope with OpenAI; use an explicitly labeled local template when AI is not configured |
-| **Validation Hub** | Track Green Belt readiness, wallet interactions, feedback, and missing external evidence |
+| **Growth Lab** | Choose a role and mission, complete a real Testnet action, verify its transaction and invite the next tester |
+| **Validation Hub** | Track Blue Belt readiness, wallet interactions, feedback, artifacts, and missing external evidence |
 
 The interface includes animated page transitions, reduced-motion support,
 desktop navigation, a mobile bottom bar, responsive cards/tables, empty states,
@@ -101,6 +120,8 @@ flowchart LR
     F --> G["Buyer verifies the off-chain result"]
     G --> H["Buyer releases payment and rates agent"]
     H --> I["Portable reputation updates on Stellar"]
+    I --> J["Growth Lab verifies wallet + contract transaction"]
+    J --> K["Participant submits feedback and invites next tester"]
 ```
 
 The browser never receives a Stellar secret key or OpenAI API key. Freighter
@@ -171,6 +192,7 @@ Vercel server functions
 Stellar Testnet
 ├── AgentRail Soroban contract
 ├── Native XLM Stellar Asset Contract
+├── Horizon transaction + operation verification
 └── Public transaction and reputation evidence
 ```
 
@@ -221,40 +243,102 @@ model was used.
   research collector when `FEEDBACK_WEBHOOK_URL` is configured.
 - **On-chain proof** remains the authoritative source for contract interaction
   evidence.
+- **Growth Lab verification** queries Horizon for transaction success and
+  operations, matches the submitted wallet, checks the contract-address ScVal,
+  identifies the invoked AgentRail function, and deduplicates accepted hashes.
 
 Wallet addresses and transaction hashes are not sent as Vercel Analytics event
 properties. No private key, Stellar secret seed, OpenAI API key, or webhook URL
 is included in the browser bundle.
 
-## Green Belt Level 4 status
+## Blue Belt Level 5 submission status
 
-Implemented engineering is intentionally separated from evidence that requires
-real people or an external publishing action.
+Engineering deliverables are separated from evidence that can only come from
+real participants. A wallet created or controlled by the project owner is not
+counted as a separate user.
 
 | Requirement | Status | Evidence / next action |
 | --- | --- | --- |
-| Fully functional MVP | **Implemented** | Registry, escrow, delivery, release, rating, refund/dispute contract paths |
-| Stable frontend/contract architecture | **Implemented** | Typed layers, Soroban tests, CI/CD quality gate, architecture document |
-| Mobile-responsive UI | **Implemented** | 320px minimum, mobile navigation, responsive layouts; capture final production screenshot |
-| Loading and error states | **Implemented** | RPC, wallet, transaction, AI, feedback, empty-state handling |
-| User onboarding | **Implemented** | Guided Testnet product tour |
-| Minimum 10 real users | **Pending real cohort** | Recruit ten people; cannot be fabricated in code |
-| Proof of wallet interactions | **Collection ready** | Public Stellar hashes + Validation Hub export |
-| Basic feedback collection | **Implemented** | In-product form, local export, optional collector forwarding |
-| Production deployment | **Implemented** | Successful `main` quality gates deploy to [Vercel production](https://agentrail-stellar.vercel.app) |
-| Monitoring and analytics | **Implemented / configuration needed** | Vercel Analytics included; add real Sentry DSN |
-| Optimized UX | **Implemented** | Split vendor chunks, responsive UI, animation reduction, clear transaction stages |
-| Proper structure/documentation | **Implemented** | README, architecture, deployment, demo, and submission runbooks |
-| Contract on Testnet | **Implemented** | Public contract and transaction links above |
-| 15+ meaningful commits | **Implemented** | Public Git history exceeds 15 commits |
-| Public GitHub repository | **Implemented** | Repository link above |
-| Live demo video | **Pending recording** | Use `docs/DEMO_SCRIPT.md`, then add URL here |
-| Product/mobile/analytics screenshots | **Pending production capture** | Capture after Vercel/Sentry configuration |
-| Feedback summary | **Pending real cohort** | Use exported responses and template in `docs/LEVEL4_SUBMISSION.md` |
+| Public GitHub repository | **Ready** | [Public repository](https://github.com/emretasss/agentrail-stellar) |
+| 20+ meaningful commits | **Ready** | 25 meaningful commits after this v0.4 documentation release; the product commit is linked below |
+| Live deployed application | **Ready** | [Vercel production](https://agentrail-stellar.vercel.app) |
+| Product stability and UX | **Ready** | v0.4 Growth Lab, responsive workspace, guided role missions, Horizon proof verification, typed transaction states, RPC recovery, seven contract tests, and CI |
+| Professional pitch deck | **Ready** | [Download PPTX](docs/pitch/AgentRail-Level5-Pitch-Deck.pptx) |
+| Product walkthrough | **Ready** | [Download WebM demo](docs/demo/AgentRail-Level5-Demo.webm) and follow the live-transaction script in [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md) |
+| Google Form | **Ready** | [Open the published participant form](https://docs.google.com/forms/d/e/1FAIpQLSfWWZxgMNLxVi7SHGKc9Y-Q66d5Dy4KHZSi72fKTtWPUFhX2A/viewform) |
+| Excel response export | **Ready for collection** | [Download the Level 5 evidence workbook](docs/evidence/AgentRail-Level5-User-Evidence.xlsx) |
+| Transaction-activity screenshot | **Ready** | [Stellar contract activity](docs/evidence/stellar-contract-activity.png) |
+| Updated documentation | **Ready** | README, architecture, demo script, and [Level 5 runbook](docs/LEVEL5_SUBMISSION.md) |
+| 50 real Testnet users | **Pending external cohort — 0/50 verified** | Distribute the form and onboard 50 independent participants |
+| Real participant transactions | **Pending external cohort** | Each counted participant must provide a successful public Testnet transaction hash |
+| Active usage proof | **Collection workflow ready; cohort pending** | Growth Lab verifies hashes against Horizon; final proof still requires 50 unique consented participant records |
+| Feedback-based iteration summary | **Pending real feedback** | Prior improvements are linked below; Level 5 cohort changes must be committed after responses are analyzed |
 
-See [docs/LEVEL4_SUBMISSION.md](docs/LEVEL4_SUBMISSION.md) for the exact
-submission runbook. The project does not fabricate ten users, monitoring
-screenshots, a live deployment URL, or a video link.
+The repository is submission-ready except for the three claims that cannot be
+produced by code: 50 real people, their real Testnet activity, and conclusions
+derived from their actual feedback. These are deliberately not fabricated.
+
+## Level 5 user onboarding and evidence
+
+The required intake workflow is live:
+
+1. Send the [Google Form](https://docs.google.com/forms/d/e/1FAIpQLSfWWZxgMNLxVi7SHGKc9Y-Q66d5Dy4KHZSi72fKTtWPUFhX2A/viewform) to each participant.
+2. The form collects name, email, public Stellar Testnet wallet address,
+   transaction hash, completed flow, 1–5 rating, qualitative feedback, and
+   explicit public-evidence consent. It warns users never to share a secret key.
+3. Responses feed a linked Google Sheet owned by the project account.
+4. Export the responses as `.xlsx`, then copy validated rows into the
+   [evidence workbook](docs/evidence/AgentRail-Level5-User-Evidence.xlsx).
+5. Count only unique wallets with a successful transaction and consent. The
+   workbook flags duplicate wallets and keeps the target fixed at 50.
+6. Commit the updated workbook and feedback summary without publishing private
+   email addresses in screenshots or prose.
+
+The workbook contains a dashboard, 50 participant slots, a form-response import
+sheet, an improvement log, formulas, duplicate checks, and privacy instructions.
+Its current verified count is intentionally **0/50** until genuine responses are
+received.
+
+## Product improvements and feedback loop
+
+The August reviewer feedback was specific: the public repository did not show a
+substantial product update beyond CI/CD, and a resubmission must be materially
+different from the previous month. That feedback produced the v0.4 **Growth
+Lab**, not another submission-only checklist. The new user-facing flow adds
+role-based missions, real Horizon transaction lookup, AgentRail contract-address
+verification, participant-wallet matching, duplicate-proof prevention,
+referral links, return-visit measurement, feedback routing, and a cohort progress
+view. Implementation: [verifiable Testnet Growth Lab](https://github.com/emretasss/agentrail-stellar/commit/46db3475e2d787714e0429ed24cc7e78940eeb2e).
+
+These existing commits establish the usability and stability baseline. They are
+real implementation links, not invented Level 5 cohort findings:
+
+| Improvement | Evidence |
+| --- | --- |
+| Guided Testnet onboarding, feedback collection, and validation evidence | [`8893a05`](https://github.com/emretasss/agentrail-stellar/commit/8893a05) |
+| Wallet-network checks and transaction lifecycle hardening | [`1ddd5bb`](https://github.com/emretasss/agentrail-stellar/commit/1ddd5bb) |
+| Responsive dashboard and end-to-end product workflows | [`3895cfa`](https://github.com/emretasss/agentrail-stellar/commit/3895cfa) |
+| Bounded pagination and contract overflow protection | [`314635c`](https://github.com/emretasss/agentrail-stellar/commit/314635c) |
+
+For the next phase, feedback will be grouped into onboarding friction, wallet
+and transaction failures, mission clarity, escrow confidence, mobile usability,
+and requested integrations. The top themes will be ranked by frequency and
+severity, converted into tracked changes, tested, and recorded in the workbook's
+**Improvement Log** with direct GitHub commit URLs. Planned decision rules:
+
+- shorten or reorder onboarding when time-to-first-transaction is the dominant
+  problem;
+- add contextual wallet/RPC recovery when signing or confirmation failures are
+  common;
+- revise copy and acceptance-criteria guidance when mission or escrow concepts
+  score poorly;
+- prioritize mobile and multi-wallet work when device or wallet support blocks
+  completion;
+- retain a request in discovery when evidence is weak instead of presenting it
+  as a validated roadmap commitment.
+
+See [docs/LEVEL5_SUBMISSION.md](docs/LEVEL5_SUBMISSION.md) for the collection,
+verification, feedback-analysis, and final go/no-go procedure.
 
 ## Local development
 
@@ -298,9 +382,12 @@ npm run deploy:testnet  # Deploy a new Testnet contract
 ## Documentation
 
 - [Architecture and security boundaries](docs/ARCHITECTURE.md)
-- [Green Belt submission runbook](docs/LEVEL4_SUBMISSION.md)
+- [Blue Belt Level 5 submission runbook](docs/LEVEL5_SUBMISSION.md)
 - [Vercel deployment and environment setup](docs/VERCEL_DEPLOYMENT.md)
 - [Three-minute demo script](docs/DEMO_SCRIPT.md)
+- [Level 5 pitch deck](docs/pitch/AgentRail-Level5-Pitch-Deck.pptx)
+- [Level 5 evidence workbook](docs/evidence/AgentRail-Level5-User-Evidence.xlsx)
+- [Level 5 walkthrough recording](docs/demo/AgentRail-Level5-Demo.webm)
 - [Original hackathon brief](docs/HACKATHON_BRIEF.md)
 
 ## Roadmap
