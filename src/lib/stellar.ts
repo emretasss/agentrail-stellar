@@ -187,6 +187,117 @@ export async function getLatestLedgerSequence(): Promise<number> {
   return latest.sequence;
 }
 
+type HorizonTransaction = {
+  hash: string;
+  successful: boolean;
+  ledger: number;
+  created_at: string;
+  source_account: string;
+  operation_count: number;
+};
+
+type HorizonOperation = {
+  type: string;
+  source_account?: string;
+  function?: string;
+  parameters?: Array<{ type: string; value: string }>;
+};
+
+type HorizonOperationsPage = {
+  _embedded?: { records?: HorizonOperation[] };
+};
+
+export type TestnetTransactionVerification = {
+  hash: string;
+  sourceAccount: string;
+  ledger: number;
+  createdAt: string;
+  operationCount: number;
+  contractInteraction: boolean;
+  walletMatches: boolean;
+  functionName?: string;
+  explorerUrl: string;
+};
+
+function decodeContractFunction(operation: HorizonOperation): string | undefined {
+  const encoded = operation.parameters?.[1]?.value;
+  if (!encoded) return undefined;
+  try {
+    const value = StellarSdk.scValToNative(
+      StellarSdk.xdr.ScVal.fromXDR(encoded, "base64"),
+    );
+    return typeof value === "string" ? value : String(value);
+  } catch {
+    return undefined;
+  }
+}
+
+export async function verifyAgentRailTestnetTransaction(
+  rawHash: string,
+  expectedWallet?: string,
+): Promise<TestnetTransactionVerification> {
+  const hash = rawHash.trim().toLowerCase();
+  if (!/^[a-f0-9]{64}$/.test(hash)) {
+    throw new Error("Enter a 64-character Stellar transaction hash.");
+  }
+  if (
+    expectedWallet &&
+    !StellarSdk.StrKey.isValidEd25519PublicKey(expectedWallet)
+  ) {
+    throw new Error("The participant wallet address is not a valid Stellar public key.");
+  }
+
+  const transactionUrl = `https://horizon-testnet.stellar.org/transactions/${hash}`;
+  const operationsUrl = `${transactionUrl}/operations?limit=20`;
+  const [transactionResponse, operationsResponse] = await Promise.all([
+    fetch(transactionUrl, { headers: { Accept: "application/json" } }),
+    fetch(operationsUrl, { headers: { Accept: "application/json" } }),
+  ]);
+
+  if (transactionResponse.status === 404) {
+    throw new Error("Transaction was not found on Stellar Testnet.");
+  }
+  if (!transactionResponse.ok || !operationsResponse.ok) {
+    throw new Error("Stellar Testnet proof service is temporarily unavailable.");
+  }
+
+  const transaction = (await transactionResponse.json()) as HorizonTransaction;
+  const operationsPage = (await operationsResponse.json()) as HorizonOperationsPage;
+  if (!transaction.successful) {
+    throw new Error("The transaction exists but did not succeed.");
+  }
+
+  const contractAddressXdr = StellarSdk.Address.fromString(
+    stellarConfig.contractId,
+  )
+    .toScVal()
+    .toXDR("base64");
+  const operations = operationsPage._embedded?.records ?? [];
+  const contractOperation = operations.find(
+    (operation) =>
+      operation.type === "invoke_host_function" &&
+      operation.parameters?.[0]?.value === contractAddressXdr,
+  );
+  const walletMatches = expectedWallet
+    ? transaction.source_account === expectedWallet ||
+      operations.some((operation) => operation.source_account === expectedWallet)
+    : true;
+
+  return {
+    hash: transaction.hash,
+    sourceAccount: transaction.source_account,
+    ledger: transaction.ledger,
+    createdAt: transaction.created_at,
+    operationCount: transaction.operation_count,
+    contractInteraction: Boolean(contractOperation),
+    walletMatches,
+    functionName: contractOperation
+      ? decodeContractFunction(contractOperation)
+      : undefined,
+    explorerUrl: `https://stellar.expert/explorer/testnet/tx/${transaction.hash}`,
+  };
+}
+
 type NativeAgent = {
   id: bigint | number;
   owner: unknown;

@@ -94,3 +94,38 @@ export type Feedback = {
   message: string;
   createdAt: string;
 };
+
+export type GrowthRole = "buyer" | "agent" | "explorer";
+
+export type GrowthMission =
+  | "register_agent"
+  | "create_job"
+  | "deliver_job"
+  | "approve_job"
+  | "explore_contract";
+
+export type VerifiedTestnetProof = {
+  hash: string;
+  wallet: string;
+  sourceAccount: string;
+  ledger: number;
+  createdAt: string;
+  verifiedAt: string;
+  operationCount: number;
+  contractInteraction: boolean;
+  walletMatches: boolean;
+  functionName?: string;
+  explorerUrl: string;
+  role: GrowthRole;
+  mission: GrowthMission;
+};
+
+export type GrowthProfile = {
+  role: GrowthRole;
+  mission: GrowthMission;
+  referralCode: string;
+  referredBy?: string;
+  startedAt: string;
+  lastSeenAt: string;
+  visits: number;
+};

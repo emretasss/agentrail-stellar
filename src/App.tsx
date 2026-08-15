@@ -4,6 +4,7 @@ import { type FormEvent, useEffect, useMemo, useState } from "react";
 import { toast, Toaster } from "sonner";
 import { AppShell, type AppView } from "@/components/app-shell";
 import { DashboardOverview } from "@/components/dashboard-overview";
+import { GrowthLab } from "@/components/growth-lab";
 import { JobActivity } from "@/components/job-activity";
 import { Marketplace } from "@/components/marketplace";
 import {
@@ -61,7 +62,7 @@ import type {
 function App() {
   const [activeView, setActiveView] = useState<AppView>(() => {
     const hash = window.location.hash.replace("#", "") as AppView;
-    return ["overview", "discover", "jobs", "copilot", "validation"].includes(hash)
+    return ["overview", "discover", "jobs", "copilot", "growth", "validation"].includes(hash)
       ? hash
       : "overview";
   });
@@ -119,7 +120,7 @@ function App() {
   useEffect(() => {
     const onHashChange = () => {
       const next = window.location.hash.replace("#", "") as AppView;
-      if (["overview", "discover", "jobs", "copilot", "validation"].includes(next)) {
+      if (["overview", "discover", "jobs", "copilot", "growth", "validation"].includes(next)) {
         setActiveView(next);
       }
     };
@@ -727,6 +728,15 @@ function App() {
 
             {activeView === "copilot" && <MissionCopilot onUsePlan={useMissionPlan} />}
 
+            {activeView === "growth" && (
+              <GrowthLab
+                wallet={wallet}
+                connecting={busy === "wallet"}
+                onConnect={handleConnect}
+                onNavigate={navigate}
+              />
+            )}
+
             {activeView === "validation" && (
               <ValidationHub onFeedback={() => setFeedbackOpen(true)} />
             )}
@@ -736,7 +746,7 @@ function App() {
         <footer
           className="mt-8 flex flex-col gap-3 border-t border-white/[.055] py-5 text-[10px] text-slate-700 sm:flex-row sm:items-center sm:justify-between"
         >
-          <span>AgentRail v0.3 · Stellar Testnet · OpenAI-assisted mission design · Non-custodial escrow</span>
+          <span>AgentRail v0.4 · Growth Lab · Stellar Testnet · Non-custodial escrow</span>
           <Button variant="ghost" size="sm" onClick={() => setFeedbackOpen(true)}>
             <MessageSquareText size={13} />
             Share feedback

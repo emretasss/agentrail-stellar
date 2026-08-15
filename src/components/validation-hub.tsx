@@ -4,12 +4,14 @@ import {
   Check,
   CircleDashed,
   ExternalLink,
+  FileSpreadsheet,
   FileVideo2,
   Github,
   MonitorCheck,
   Rocket,
   ShieldCheck,
   Smartphone,
+  TrendingUp,
   Users,
   WalletCards,
 } from "lucide-react";
@@ -23,10 +25,13 @@ import {
   downloadValidationReport,
   getEvidence,
   getFeedback,
+  getVerifiedTestnetProofs,
 } from "@/lib/product-analytics";
 
 const contractUrl =
   "https://stellar.expert/explorer/testnet/contract/CB6QV6VUJH4FRSLZRTOV2HBIIXSZ4V2YRTCE3S5U4KCLZE7QFW4YTLV5";
+const feedbackFormUrl =
+  "https://docs.google.com/forms/d/e/1FAIpQLSfWWZxgMNLxVi7SHGKc9Y-Q66d5Dy4KHZSi72fKTtWPUFhX2A/viewform";
 
 export function ValidationHub({
   onFeedback,
@@ -37,13 +42,21 @@ export function ValidationHub({
     const wallets = getEvidence();
     const feedback = getFeedback();
     const transacting = wallets.filter((wallet) => wallet.transactions.length > 0);
+    const verifiedProofs = getVerifiedTestnetProofs().filter(
+      (proof) => proof.contractInteraction && proof.walletMatches,
+    );
+    const verifiedWallets = new Set([
+      ...transacting.map((item) => item.address),
+      ...verifiedProofs.map((item) => item.wallet),
+    ]);
     const average =
       feedback.length > 0
         ? feedback.reduce((sum, item) => sum + item.score, 0) / feedback.length
         : 0;
     return {
       wallets: wallets.length,
-      interactions: transacting.length,
+      interactions: verifiedWallets.size,
+      proofs: verifiedProofs.length,
       feedback: feedback.length,
       average,
     };
@@ -63,8 +76,8 @@ export function ValidationHub({
       ready: true,
     },
     {
-      label: "15+ commits",
-      detail: "Meaningful public Git history exceeds the requirement",
+      label: "20+ commits",
+      detail: "Meaningful public Git history exceeds the Level 5 requirement",
       icon: Github,
       ready: true,
     },
@@ -82,21 +95,39 @@ export function ValidationHub({
     },
     {
       label: "Production URL",
-      detail: "Add the final Vercel URL to README after deployment",
+      detail: "Live application is available on Vercel",
       icon: MonitorCheck,
-      ready: false,
+      ready: true,
     },
     {
-      label: "10 real wallet users",
-      detail: `${metrics.interactions}/10 wallets with a recorded contract interaction on this device`,
+      label: "50 real testnet users",
+      detail: `${metrics.interactions}/50 wallets with a recorded contract interaction on this device`,
       icon: Users,
-      ready: metrics.interactions >= 10,
+      ready: metrics.interactions >= 50,
+    },
+    {
+      label: "Growth Lab",
+      detail: "Guided role missions, referral links and Horizon-backed transaction verification",
+      icon: TrendingUp,
+      ready: true,
+    },
+    {
+      label: "Feedback evidence workflow",
+      detail: "Published Google Form, linked response sheet and Excel evidence workbook",
+      icon: FileSpreadsheet,
+      ready: true,
+    },
+    {
+      label: "Pitch deck",
+      detail: "Professional Level 5 deck covers problem, solution, architecture, growth and roadmap",
+      icon: BarChart3,
+      ready: true,
     },
     {
       label: "Demo video",
-      detail: "Record the prepared three-minute product walkthrough",
+      detail: "Repository includes the Level 5 product walkthrough recording",
       icon: FileVideo2,
-      ready: false,
+      ready: true,
     },
   ];
   const completed = checks.filter((check) => check.ready).length;
@@ -106,7 +137,7 @@ export function ValidationHub({
     icon: LucideIcon;
   }> = [
     { label: "Wallets observed", value: metrics.wallets, icon: WalletCards },
-    { label: "On-chain users", value: metrics.interactions, icon: ShieldCheck },
+    { label: "Verified users", value: metrics.interactions, icon: ShieldCheck },
     { label: "Feedback entries", value: metrics.feedback, icon: Users },
     {
       label: "Average score",
@@ -123,7 +154,7 @@ export function ValidationHub({
           <div>
             <Badge className="mb-4">
               <BarChart3 size={12} />
-              Level 4 readiness
+              Level 5 readiness
             </Badge>
             <h2 className="max-w-2xl text-2xl font-semibold tracking-[-0.04em] text-white sm:text-3xl">
               Evidence, not checkbox theatre.
@@ -204,7 +235,12 @@ export function ValidationHub({
               <CardTitle className="text-sm">Evidence actions</CardTitle>
             </CardHeader>
             <CardContent className="grid gap-2">
-              <Button onClick={onFeedback}>Collect participant feedback</Button>
+              <Button asChild>
+                <a href={feedbackFormUrl} target="_blank" rel="noreferrer">
+                  Open Level 5 feedback form <ExternalLink size={13} />
+                </a>
+              </Button>
+              <Button variant="outline" onClick={onFeedback}>Collect in-app feedback</Button>
               <Button variant="outline" onClick={downloadValidationReport}>
                 Export local validation report
               </Button>

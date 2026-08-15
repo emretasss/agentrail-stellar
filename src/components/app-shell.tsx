@@ -10,6 +10,7 @@ import {
   Radio,
   ShieldCheck,
   Sparkles,
+  TrendingUp,
   Users,
   Wallet,
   X,
@@ -21,7 +22,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { WalletState } from "@/lib/stellar";
 
-export type AppView = "overview" | "discover" | "jobs" | "copilot" | "validation";
+export type AppView = "overview" | "discover" | "jobs" | "copilot" | "growth" | "validation";
 
 const viewMeta: Record<AppView, { title: string; subtitle: string }> = {
   overview: {
@@ -40,9 +41,13 @@ const viewMeta: Record<AppView, { title: string; subtitle: string }> = {
     title: "Mission Copilot",
     subtitle: "Design a measurable agent mission with AI",
   },
+  growth: {
+    title: "Growth Lab",
+    subtitle: "Complete, verify and share a real Testnet mission",
+  },
   validation: {
     title: "Validation hub",
-    subtitle: "Track Level 4 readiness and real-user evidence",
+    subtitle: "Track Level 5 growth, feedback and real-user evidence",
   },
 };
 
@@ -155,6 +160,19 @@ export function AppShell({
         <nav className="mt-6 grid gap-1" aria-label="Validation navigation">
           <p className="px-3 pb-2 text-[9px] font-semibold uppercase tracking-[.2em] text-slate-700">Launch</p>
           <button
+            onClick={() => navigate("growth")}
+            className={cn(
+              "relative flex h-11 items-center gap-3 overflow-hidden rounded-xl px-3 text-sm font-medium transition",
+              activeView === "growth"
+                ? "bg-emerald-400/[.08] text-emerald-200"
+                : "text-slate-500 hover:bg-white/[.035] hover:text-slate-200",
+            )}
+          >
+            <TrendingUp size={17} />
+            Growth Lab
+            <Badge variant="secondary" className="ml-auto px-1.5 py-0 text-[8px] text-emerald-300">NEW</Badge>
+          </button>
+          <button
             onClick={() => navigate("validation")}
             className={cn(
               "relative flex h-11 items-center gap-3 overflow-hidden rounded-xl px-3 text-sm font-medium transition",
@@ -254,12 +272,13 @@ export function AppShell({
         <main className="mx-auto w-full max-w-[1660px] p-4 sm:p-6 lg:p-7">{children}</main>
       </div>
 
-      <nav className="fixed inset-x-3 bottom-3 z-30 grid grid-cols-5 rounded-2xl border border-white/[.08] bg-[#080d19]/92 p-1.5 shadow-2xl backdrop-blur-2xl lg:hidden">
+      <nav className="fixed inset-x-3 bottom-3 z-30 grid grid-cols-6 rounded-2xl border border-white/[.08] bg-[#080d19]/92 p-1.5 shadow-2xl backdrop-blur-2xl lg:hidden">
         {[
           { id: "overview" as const, label: "Home", icon: LayoutDashboard },
           { id: "discover" as const, label: "Agents", icon: Bot },
           { id: "jobs" as const, label: "Jobs", icon: BriefcaseBusiness },
           { id: "copilot" as const, label: "Copilot", icon: BrainCircuit },
+          { id: "growth" as const, label: "Grow", icon: TrendingUp },
           { id: "validation" as const, label: "Proof", icon: ShieldCheck },
         ].map(({ id, label, icon: Icon }) => (
           <button

@@ -1,9 +1,16 @@
 import { track as vercelTrack } from "@vercel/analytics";
-import type { Feedback, WalletEvidence } from "@/types/agentrail";
+import type {
+  Feedback,
+  GrowthProfile,
+  VerifiedTestnetProof,
+  WalletEvidence,
+} from "@/types/agentrail";
 
 const ANALYTICS_KEY = "agentrail.analytics.v1";
 const EVIDENCE_KEY = "agentrail.wallet-evidence.v1";
 const FEEDBACK_KEY = "agentrail.feedback.v1";
+const VERIFIED_PROOFS_KEY = "agentrail.verified-testnet-proofs.v1";
+const GROWTH_PROFILE_KEY = "agentrail.growth-profile.v1";
 
 type ProductEvent = {
   name: string;
@@ -104,12 +111,60 @@ export function getAnalyticsEvents(): ProductEvent[] {
   return readJson<ProductEvent[]>(ANALYTICS_KEY, []);
 }
 
+export function getVerifiedTestnetProofs(): VerifiedTestnetProof[] {
+  return readJson<VerifiedTestnetProof[]>(VERIFIED_PROOFS_KEY, []);
+}
+
+export function saveVerifiedTestnetProof(proof: VerifiedTestnetProof): boolean {
+  const proofs = getVerifiedTestnetProofs();
+  if (proofs.some((item) => item.hash === proof.hash)) return false;
+  proofs.push(proof);
+  writeJson(VERIFIED_PROOFS_KEY, proofs.slice(-100));
+  trackEvent("growth_proof_verified", {
+    mission: proof.mission,
+    role: proof.role,
+    contractInteraction: proof.contractInteraction,
+    walletMatches: proof.walletMatches,
+  });
+  return true;
+}
+
+export function getGrowthProfile(): GrowthProfile | null {
+  return readJson<GrowthProfile | null>(GROWTH_PROFILE_KEY, null);
+}
+
+export function saveGrowthProfile(profile: GrowthProfile) {
+  writeJson(GROWTH_PROFILE_KEY, profile);
+  trackEvent("growth_mission_selected", {
+    mission: profile.mission,
+    role: profile.role,
+    referred: Boolean(profile.referredBy),
+  });
+}
+
+export function touchGrowthProfile(): GrowthProfile | null {
+  const profile = getGrowthProfile();
+  if (!profile) return null;
+  const next = {
+    ...profile,
+    lastSeenAt: new Date().toISOString(),
+    visits: profile.visits + 1,
+  };
+  writeJson(GROWTH_PROFILE_KEY, next);
+  if (next.visits > 1) {
+    trackEvent("growth_lab_returned", { visits: next.visits });
+  }
+  return next;
+}
+
 export function downloadValidationReport() {
   const report = {
     generatedAt: new Date().toISOString(),
     wallets: getEvidence(),
     feedback: getFeedback(),
     events: getAnalyticsEvents(),
+    verifiedTestnetProofs: getVerifiedTestnetProofs(),
+    growthProfile: getGrowthProfile(),
   };
   const blob = new Blob([JSON.stringify(report, null, 2)], {
     type: "application/json",
