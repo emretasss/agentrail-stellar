@@ -25,24 +25,28 @@ const metricStyle = [
     label: "Value in escrow",
     suffix: " XLM",
     icon: LockKeyhole,
+    accent: "violet",
   },
   {
     key: "released" as const,
     label: "Settled volume",
     suffix: " XLM",
     icon: CircleDollarSign,
+    accent: "mint",
   },
   {
     key: "jobs" as const,
     label: "Total jobs",
     suffix: "",
     icon: Clock3,
+    accent: "cyan",
   },
   {
     key: "agents" as const,
     label: "Active agents",
     suffix: "",
     icon: Bot,
+    accent: "rose",
   },
 ];
 
@@ -69,21 +73,22 @@ export function DashboardOverview({
 
   return (
     <>
-      <section className="mb-6 flex flex-col justify-between gap-4 xl:flex-row xl:items-end">
-        <div>
-          <div className="mb-2 flex items-center gap-2 text-xs font-medium text-emerald-400">
+      <section className="workspace-hero relative mb-5 flex flex-col justify-between gap-5 overflow-hidden rounded-2xl border border-white/[.075] p-5 sm:p-6 xl:flex-row xl:items-end">
+        <div className="workspace-hero-orb" />
+        <div className="relative">
+          <div className="mb-3 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[.16em] text-[#78e8ff]">
             <Sparkles size={14} />
-            Autonomous commerce on Stellar
+            Autonomous commerce protocol
           </div>
           <h2 className="max-w-3xl text-2xl font-semibold tracking-[-0.035em] text-slate-50 sm:text-3xl">
-            Trust infrastructure for the agent economy.
+            Command the <span className="workspace-gradient-text">agent economy.</span>
           </h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
             Discover verified services, protect every payment with Soroban escrow,
             and build portable on-chain reputation.
           </p>
         </div>
-        <div className="flex flex-col gap-2 sm:flex-row">
+        <div className="relative flex flex-col gap-2 sm:flex-row">
           <Button variant="outline" onClick={onRegisterAgent}>
             <Bot size={16} />
             Publish an agent
@@ -96,10 +101,10 @@ export function DashboardOverview({
       </section>
 
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {metricStyle.map(({ key, label, suffix, icon: Icon }) => (
-          <Card key={key} className="group overflow-hidden">
+        {metricStyle.map(({ key, label, suffix, icon: Icon, accent }) => (
+          <Card key={key} className={`metric-card metric-card-${accent} group overflow-hidden`}>
             <CardContent className="relative p-4">
-              <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-emerald-400/30 to-transparent opacity-0 transition group-hover:opacity-100" />
+              <div className="metric-card-line absolute inset-x-0 top-0 h-px opacity-70 transition group-hover:opacity-100" />
               <div className="flex items-start justify-between">
                 <div>
                   <p className="text-xs text-slate-500">{label}</p>
@@ -108,7 +113,7 @@ export function DashboardOverview({
                     <span className="ml-1 text-xs font-normal text-slate-600">{suffix}</span>
                   </p>
                 </div>
-                <span className="grid size-8 place-items-center rounded-lg border border-white/[.07] bg-white/[.035] text-slate-500">
+                <span className="metric-card-icon grid size-9 place-items-center rounded-xl border">
                   <Icon size={15} />
                 </span>
               </div>
@@ -137,9 +142,9 @@ export function DashboardOverview({
             {lifecycle.map(({ label, value, icon: Icon }, index) => (
               <div
                 key={label}
-                className="relative flex min-h-36 flex-col justify-between overflow-hidden rounded-xl border border-white/[.06] bg-white/[.02] p-4"
+                className={`lifecycle-node lifecycle-node-${index + 1} relative flex min-h-36 flex-col justify-between overflow-hidden rounded-xl border border-white/[.07] bg-white/[.02] p-4`}
               >
-                <span className="grid size-8 place-items-center rounded-lg bg-emerald-400/[.08] text-emerald-300">
+                <span className="lifecycle-icon grid size-8 place-items-center rounded-lg">
                   <Icon size={15} />
                 </span>
                 <div>

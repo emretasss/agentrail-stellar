@@ -93,12 +93,13 @@ export function AppShell({
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="workspace-shell min-h-screen bg-background text-foreground">
       <div className="ambient-grid" />
       <div className="ambient-aurora" />
+      <div className="ledger-stars" />
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-40 flex w-[260px] flex-col border-r border-white/[.065] bg-[#050914]/95 px-3 py-4 backdrop-blur-2xl transition-transform lg:translate-x-0",
+          "workspace-sidebar fixed inset-y-0 left-0 z-40 flex w-[260px] flex-col border-r border-white/[.07] px-3 py-4 backdrop-blur-2xl transition-transform lg:translate-x-0",
           mobileOpen ? "translate-x-0" : "-translate-x-full",
         )}
       >
@@ -108,9 +109,9 @@ export function AppShell({
             onClick={() => navigate("overview")}
             aria-label="AgentRail home"
           >
-            <span className="relative">
-              <img src="/agentrail-mark.svg" alt="" className="size-9 rounded-xl shadow-[0_0_24px_rgba(52,211,153,.16)]" />
-              <span className="absolute -right-0.5 -top-0.5 size-2.5 rounded-full border-2 border-[#050914] bg-emerald-400" />
+            <span className="workspace-brand-mark relative grid size-10 place-items-center rounded-xl">
+              <img src="/agentrail-mark.svg" alt="" className="size-8 rounded-lg" />
+              <span className="absolute -right-0.5 -top-0.5 size-2.5 rounded-full border-2 border-[#080916] bg-[#61f6c2] shadow-[0_0_10px_#61f6c2]" />
             </span>
             <span className="text-left">
               <strong className="block text-sm tracking-[-0.025em] text-white">AgentRail</strong>
@@ -138,13 +139,13 @@ export function AppShell({
                 {active && (
                   <motion.span
                     layoutId="active-navigation"
-                    className="absolute inset-0 border border-emerald-400/10 bg-gradient-to-r from-emerald-400/[.11] to-transparent"
+                    className="absolute inset-0 border border-[#746cff]/20 bg-gradient-to-r from-[#746cff]/[.16] via-[#746cff]/[.07] to-transparent shadow-[inset_3px_0_0_#78e8ff]"
                     transition={{ type: "spring", stiffness: 420, damping: 36 }}
                   />
                 )}
                 <Icon
                   size={17}
-                  className={cn("relative", active && "text-emerald-300", accent && !active && "text-violet-400")}
+                  className={cn("relative", active && "text-[#8fe9ff]", accent && !active && "text-[#aaa5ff]")}
                 />
                 <span className="relative">{label}</span>
                 {accent && (
@@ -165,7 +166,7 @@ export function AppShell({
             className={cn(
               "relative flex h-11 items-center gap-3 overflow-hidden rounded-xl px-3 text-sm font-medium transition",
               activeView === "growth"
-                ? "bg-emerald-400/[.08] text-emerald-200"
+                ? "bg-[#61f6c2]/[.08] text-[#83f8cf]"
                 : "text-slate-500 hover:bg-white/[.035] hover:text-slate-200",
             )}
           >
@@ -230,7 +231,7 @@ export function AppShell({
       )}
 
       <div className="relative pb-20 lg:pb-0 lg:pl-[260px]">
-        <header className="sticky top-0 z-20 flex h-[72px] items-center border-b border-white/[.055] bg-[#050914]/78 px-4 backdrop-blur-2xl sm:px-6">
+        <header className="workspace-header sticky top-0 z-20 flex h-[72px] items-center border-b border-white/[.06] px-4 backdrop-blur-2xl sm:px-6">
           <Button className="mr-2 lg:hidden" variant="ghost" size="icon" onClick={() => setMobileOpen(true)}>
             <Menu size={18} />
           </Button>
@@ -277,7 +278,7 @@ export function AppShell({
         <main className="mx-auto w-full max-w-[1660px] p-4 sm:p-6 lg:p-7">{children}</main>
       </div>
 
-      <nav className="fixed inset-x-3 bottom-3 z-30 grid grid-cols-6 rounded-2xl border border-white/[.08] bg-[#080d19]/92 p-1.5 shadow-2xl backdrop-blur-2xl lg:hidden">
+      <nav className="workspace-mobile-nav fixed inset-x-3 bottom-3 z-30 grid grid-cols-6 rounded-2xl border border-white/[.09] p-1.5 shadow-2xl backdrop-blur-2xl lg:hidden">
         {[
           { id: "overview" as const, label: "Home", icon: LayoutDashboard },
           { id: "discover" as const, label: "Agents", icon: Bot },
@@ -291,7 +292,7 @@ export function AppShell({
             onClick={() => navigate(id)}
             className={cn(
               "flex min-w-0 flex-col items-center gap-1 rounded-xl px-1 py-2 text-[8px] transition",
-              activeView === id ? "bg-emerald-400/10 text-emerald-300" : "text-slate-600",
+              activeView === id ? "bg-[#746cff]/15 text-[#8fe9ff] shadow-[inset_0_0_0_1px_rgba(120,232,255,.1)]" : "text-slate-600",
             )}
           >
             <Icon size={15} />
