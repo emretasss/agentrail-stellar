@@ -260,7 +260,7 @@ counted as a separate user.
 | Requirement | Status | Evidence / next action |
 | --- | --- | --- |
 | Public GitHub repository | **Ready** | [Public repository](https://github.com/emretasss/agentrail-stellar) |
-| 20+ meaningful commits | **Ready** | 25 meaningful commits after this v0.4 documentation release; the product commit is linked below |
+| 20+ meaningful commits | **Ready** | 26 meaningful commits on `main`; the major product commit is linked below |
 | Live deployed application | **Ready** | [Vercel production](https://agentrail-stellar.vercel.app) |
 | Product stability and UX | **Ready** | v0.4 Growth Lab, responsive workspace, guided role missions, Horizon proof verification, typed transaction states, RPC recovery, seven contract tests, and CI |
 | Professional pitch deck | **Ready** | [Download PPTX](docs/pitch/AgentRail-Level5-Pitch-Deck.pptx) |
