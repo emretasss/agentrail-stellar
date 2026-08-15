@@ -19,6 +19,7 @@ import { motion } from "framer-motion";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import LoadingState from "@/components/ui/loading-state";
 import { cn } from "@/lib/utils";
 import type { WalletState } from "@/lib/stellar";
 
@@ -203,9 +204,13 @@ export function AppShell({
               </span>
               <span className={cn("size-1.5 rounded-full", dataMode === "live" ? "bg-emerald-400" : "bg-amber-300")} />
             </div>
-            <strong className="mt-2 block text-xs text-slate-300">
-              {dataMode === "live" ? "Testnet operational" : dataMode === "loading" ? "Connecting…" : "Attention required"}
-            </strong>
+            {dataMode === "loading" ? (
+              <LoadingState label="Syncing Testnet" variant="Orbit" className="mt-2" />
+            ) : (
+              <strong className="mt-2 block text-xs text-slate-300">
+                {dataMode === "live" ? "Testnet operational" : "Attention required"}
+              </strong>
+            )}
           </div>
           <a
             href="https://stellar.expert/explorer/testnet/contract/CB6QV6VUJH4FRSLZRTOV2HBIIXSZ4V2YRTCE3S5U4KCLZE7QFW4YTLV5"

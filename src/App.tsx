@@ -6,6 +6,7 @@ import { AppShell, type AppView } from "@/components/app-shell";
 import { DashboardOverview } from "@/components/dashboard-overview";
 import { GrowthLab } from "@/components/growth-lab";
 import { JobActivity } from "@/components/job-activity";
+import { LandingPage } from "@/components/landing-page";
 import { Marketplace } from "@/components/marketplace";
 import {
   MissionCopilot,
@@ -59,13 +60,27 @@ import type {
   TransactionStage,
 } from "@/types/agentrail";
 
+const workspaceViews: AppView[] = [
+  "overview",
+  "discover",
+  "jobs",
+  "copilot",
+  "growth",
+  "validation",
+];
+
+function isWorkspaceView(value: string): value is AppView {
+  return workspaceViews.includes(value as AppView);
+}
+
 function App() {
   const [activeView, setActiveView] = useState<AppView>(() => {
-    const hash = window.location.hash.replace("#", "") as AppView;
-    return ["overview", "discover", "jobs", "copilot", "growth", "validation"].includes(hash)
-      ? hash
-      : "overview";
+    const hash = window.location.hash.replace("#", "");
+    return isWorkspaceView(hash) ? hash : "overview";
   });
+  const [workspaceOpen, setWorkspaceOpen] = useState(() =>
+    isWorkspaceView(window.location.hash.replace("#", "")),
+  );
   const [wallet, setWallet] = useState<WalletState | null>(null);
   const [agents, setAgents] = useState<Agent[]>(
     stellarConfig.demoMode ? sampleAgents : [],
@@ -111,17 +126,24 @@ function App() {
       setWallet(connected);
       if (connected) recordWalletConnection(connected.address);
     });
-    if (!window.localStorage.getItem("agentrail.onboarding.seen")) {
-      const timer = window.setTimeout(() => setOnboardingOpen(true), 800);
-      return () => window.clearTimeout(timer);
-    }
   }, []);
 
   useEffect(() => {
+    if (!workspaceOpen || window.localStorage.getItem("agentrail.onboarding.seen")) {
+      return;
+    }
+    const timer = window.setTimeout(() => setOnboardingOpen(true), 800);
+    return () => window.clearTimeout(timer);
+  }, [workspaceOpen]);
+
+  useEffect(() => {
     const onHashChange = () => {
-      const next = window.location.hash.replace("#", "") as AppView;
-      if (["overview", "discover", "jobs", "copilot", "growth", "validation"].includes(next)) {
+      const next = window.location.hash.replace("#", "");
+      if (isWorkspaceView(next)) {
         setActiveView(next);
+        setWorkspaceOpen(true);
+      } else {
+        setWorkspaceOpen(false);
       }
     };
     window.addEventListener("hashchange", onHashChange);
@@ -204,7 +226,7 @@ function App() {
     setTransactionStage("idle");
   }
 
-  async function handleConnect() {
+  async function handleConnect(): Promise<boolean> {
     setBusy("wallet");
     try {
       const connected = await connectFreighter();
@@ -217,11 +239,13 @@ function App() {
       toast.success("Freighter connected", {
         description: "Your wallet is ready for Testnet transactions.",
       });
+      return true;
     } catch (error) {
       const message = error instanceof Error ? error.message : "Wallet connection failed.";
       captureProductError(error, { flow: "wallet_connect" });
       pushActivity("Wallet connection failed", message, "error");
       toast.error("Could not connect wallet", { description: message });
+      return false;
     } finally {
       setBusy(null);
     }
@@ -586,6 +610,7 @@ function App() {
   }
 
   function navigate(view: AppView) {
+    setWorkspaceOpen(true);
     setActiveView(view);
     window.history.replaceState(null, "", `#${view}`);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -627,6 +652,16 @@ function App() {
   return (
     <ThemeProvider defaultTheme="dark">
       <TooltipProvider delayDuration={200}>
+        {!workspaceOpen ? (
+          <LandingPage
+            wallet={wallet}
+            connecting={busy === "wallet"}
+            onEnter={() => navigate("overview")}
+            onOpenCopilot={() => navigate("copilot")}
+            onConnect={handleConnect}
+          />
+        ) : (
+          <>
         <AppShell
         wallet={wallet}
         connecting={busy === "wallet"}
@@ -753,6 +788,8 @@ function App() {
           </Button>
         </footer>
         </AppShell>
+          </>
+        )}
 
       <RegisterAgentDialog
         open={registerOpen}

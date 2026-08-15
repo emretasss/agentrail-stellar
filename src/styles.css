@@ -11,17 +11,22 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  --color-slate-500: #94a3b8;
+  --color-slate-600: #718096;
+  --color-slate-700: #64748b;
 }
 
 :root {
   --radius: 0.625rem;
   --background: #f8fafc;
   --foreground: #0f172a;
+  --muted-foreground: #64748b;
 }
 
 .dark {
   --background: #030711;
   --foreground: #f1f5f9;
+  --muted-foreground: #94a3b8;
 }
 
 * {
@@ -123,6 +128,269 @@ button {
   animation: copilot-breathe 7s ease-in-out infinite;
 }
 
+.landing-page {
+  --rail-violet: #746cff;
+  --rail-cyan: #78e8ff;
+  --rail-mint: #61f6c2;
+  background:
+    radial-gradient(circle at 50% -24%, rgba(71, 63, 200, 0.15), transparent 31rem),
+    #050510;
+}
+
+.landing-header {
+  border: 1px solid rgba(255, 255, 255, 0.075);
+  background: rgba(9, 9, 22, 0.66);
+  box-shadow: 0 12px 50px rgba(0, 0, 0, 0.24);
+  backdrop-filter: blur(22px) saturate(145%);
+}
+
+.brand-mark {
+  border: 1px solid rgba(116, 108, 255, 0.22);
+  background: linear-gradient(145deg, rgba(116, 108, 255, 0.16), rgba(120, 232, 255, 0.04));
+  box-shadow: inset 0 1px rgba(255, 255, 255, 0.06);
+}
+
+.landing-noise {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.5'/%3E%3C/svg%3E");
+}
+
+.landing-mesh {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(130, 140, 220, 0.027) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(130, 140, 220, 0.027) 1px, transparent 1px);
+  background-position: center top;
+  background-size: 64px 64px;
+  mask-image: linear-gradient(to bottom, black 0%, rgba(0, 0, 0, 0.8) 38%, transparent 78%);
+}
+
+.landing-beam {
+  position: absolute;
+  width: 46rem;
+  height: 46rem;
+  border-radius: 9999px;
+  pointer-events: none;
+  filter: blur(140px);
+  opacity: 0.12;
+  animation: landing-drift 15s ease-in-out infinite alternate;
+}
+
+.landing-beam-one {
+  left: -24rem;
+  top: 8rem;
+  background: #564dff;
+}
+
+.landing-beam-two {
+  right: -24rem;
+  top: 4rem;
+  background: #29c9e7;
+  animation-delay: -7s;
+}
+
+.landing-gradient-text {
+  padding-right: 0.08em;
+  background: linear-gradient(105deg, #a7a2ff 5%, #78e8ff 48%, #61f6c2 94%);
+  background-size: 170% auto;
+  background-clip: text;
+  color: transparent;
+  animation: landing-gradient 8s ease-in-out infinite alternate;
+}
+
+.landing-primary-button {
+  border: 1px solid rgba(139, 132, 255, 0.55);
+  background: linear-gradient(135deg, #786fff, #574fe0) !important;
+  color: white !important;
+  box-shadow: 0 12px 35px rgba(83, 73, 226, 0.24), inset 0 1px rgba(255, 255, 255, 0.2) !important;
+}
+
+.landing-primary-button:hover {
+  box-shadow: 0 16px 44px rgba(83, 73, 226, 0.36), 0 0 0 5px rgba(116, 108, 255, 0.08) !important;
+  transform: translateY(-1px);
+}
+
+.landing-terminal::before {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  content: "";
+  background:
+    linear-gradient(125deg, rgba(255, 255, 255, 0.06), transparent 22%),
+    radial-gradient(circle at 82% 3%, rgba(116, 108, 255, 0.1), transparent 28%);
+}
+
+.terminal-scanline {
+  position: absolute;
+  z-index: 3;
+  top: -12%;
+  left: 0;
+  width: 100%;
+  height: 18%;
+  pointer-events: none;
+  background: linear-gradient(to bottom, transparent, rgba(120, 232, 255, 0.035), transparent);
+  animation: terminal-scan 8s linear infinite;
+}
+
+.network-orbit {
+  position: absolute;
+  z-index: -1;
+  border: 1px solid rgba(116, 108, 255, 0.11);
+  border-radius: 9999px;
+  pointer-events: none;
+  transform: rotate(-12deg);
+}
+
+.network-orbit::after {
+  position: absolute;
+  top: 50%;
+  left: -3px;
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background: var(--rail-cyan);
+  box-shadow: 0 0 16px var(--rail-cyan);
+  content: "";
+}
+
+.network-orbit-one {
+  inset: -7% -5%;
+  animation: orbit-pulse 7s ease-in-out infinite;
+}
+
+.network-orbit-two {
+  inset: -14% -11%;
+  border-color: rgba(97, 246, 194, 0.07);
+  animation: orbit-pulse 7s ease-in-out -3.5s infinite;
+}
+
+.protocol-line {
+  position: absolute;
+  top: -1px;
+  left: 15%;
+  width: 30%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--rail-violet), var(--rail-cyan), transparent);
+  box-shadow: 0 0 18px rgba(120, 232, 255, 0.35);
+  animation: protocol-line 8s ease-in-out infinite alternate;
+}
+
+.section-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: #8b86ff;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+}
+
+.landing-section-glow {
+  position: absolute;
+  width: 32rem;
+  height: 32rem;
+  border-radius: 9999px;
+  pointer-events: none;
+  filter: blur(150px);
+  opacity: 0.06;
+}
+
+.flow-connector {
+  position: absolute;
+  top: 3.75rem;
+  right: 12%;
+  left: 12%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(116, 108, 255, 0.28), rgba(120, 232, 255, 0.25), rgba(97, 246, 194, 0.22), transparent);
+}
+
+.flow-card {
+  min-height: 360px;
+  transition: transform 300ms ease, border-color 300ms ease, box-shadow 300ms ease;
+}
+
+.flow-card:hover {
+  transform: translateY(-7px);
+  border-color: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 28px 70px rgba(0, 0, 0, 0.28);
+}
+
+.flow-card-glow {
+  position: absolute;
+  top: -5rem;
+  left: -4rem;
+  width: 14rem;
+  height: 14rem;
+  border-radius: 9999px;
+  opacity: 0.07;
+  filter: blur(60px);
+  transition: opacity 300ms ease;
+}
+
+.flow-card:hover .flow-card-glow {
+  opacity: 0.13;
+}
+
+.flow-card-violet .flow-card-glow { background: var(--rail-violet); }
+.flow-card-cyan .flow-card-glow { background: var(--rail-cyan); }
+.flow-card-mint .flow-card-glow { background: var(--rail-mint); }
+.flow-card-violet .flow-icon { border-color: rgba(116, 108, 255, 0.25); background: rgba(116, 108, 255, 0.1); color: #aaa5ff; }
+.flow-card-cyan .flow-icon { border-color: rgba(120, 232, 255, 0.2); background: rgba(120, 232, 255, 0.08); color: var(--rail-cyan); }
+.flow-card-mint .flow-icon { border-color: rgba(97, 246, 194, 0.2); background: rgba(97, 246, 194, 0.08); color: var(--rail-mint); }
+
+.security-grid::before {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  content: "";
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.018) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.018) 1px, transparent 1px);
+  background-size: 36px 36px;
+  mask-image: linear-gradient(90deg, transparent, black 55%);
+}
+
+.security-tile {
+  transition: transform 250ms ease, border-color 250ms ease, background 250ms ease;
+}
+
+.security-tile:hover {
+  transform: translateY(-3px);
+  border-color: rgba(120, 232, 255, 0.15);
+  background: rgba(120, 232, 255, 0.035);
+}
+
+@keyframes landing-drift {
+  from { transform: translate3d(-3%, -2%, 0) scale(0.95); }
+  to { transform: translate3d(5%, 4%, 0) scale(1.07); }
+}
+
+@keyframes landing-gradient {
+  from { background-position: 0% 50%; }
+  to { background-position: 100% 50%; }
+}
+
+@keyframes terminal-scan {
+  from { transform: translateY(-100%); }
+  to { transform: translateY(680%); }
+}
+
+@keyframes orbit-pulse {
+  0%, 100% { opacity: 0.38; transform: rotate(-12deg) scale(0.98); }
+  50% { opacity: 0.8; transform: rotate(-8deg) scale(1.02); }
+}
+
+@keyframes protocol-line {
+  from { transform: translateX(-25%); opacity: 0.55; }
+  to { transform: translateX(175%); opacity: 1; }
+}
+
 [data-slot="card"] {
   background-image: linear-gradient(145deg, rgba(255, 255, 255, 0.018), transparent 48%);
 }
@@ -153,6 +421,25 @@ button {
   50% {
     transform: scale(1.08) rotate(5deg);
     opacity: 1;
+  }
+}
+
+@keyframes pixel-on {
+  0%,
+  100% {
+    opacity: 0.12;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes shimmer-text {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
   }
 }
 

@@ -72,7 +72,7 @@ commercial trust is still weak:
 
 AgentRail addresses those gaps with four connected layers:
 
-1. **Mission design** — OpenAI-powered Mission Copilot converts a rough request
+1. **Mission design** — Gemini-powered Mission Copilot converts a rough request
    into deliverables, acceptance criteria, risks, budget guidance, and a Stellar
    ledger deadline.
 2. **Agent discovery** — service identity, ownership, price, completed work, and
@@ -99,7 +99,7 @@ landing page:
 | **Command Center** | Live contract metrics, ledger health, settlement lifecycle, and product explanation |
 | **Agent Network** | Search, compare, inspect, and hire contract-backed agents |
 | **Escrow Operations** | Follow funded, delivered, released, refunded, and disputed jobs |
-| **Mission Copilot** | Generate an escrow-ready work scope with OpenAI; use an explicitly labeled local template when AI is not configured |
+| **Mission Copilot** | Generate an escrow-ready work scope with Gemini; use an explicitly labeled local template when AI is not configured |
 | **Growth Lab** | Choose a role and mission, complete a real Testnet action, verify its transaction and invite the next tester |
 | **Validation Hub** | Track Blue Belt readiness, wallet interactions, feedback, artifacts, and missing external evidence |
 
@@ -124,8 +124,8 @@ flowchart LR
     J --> K["Participant submits feedback and invites next tester"]
 ```
 
-The browser never receives a Stellar secret key or OpenAI API key. Freighter
-signs Stellar transactions, and OpenAI calls run through a Vercel server
+The browser never receives a Stellar secret key or Gemini API key. Freighter
+signs Stellar transactions, and Gemini calls run through a Vercel server
 function.
 
 ## Current Testnet deployment
@@ -186,7 +186,7 @@ Browser
 └── Local validation evidence + optional feedback webhook
 
 Vercel server functions
-├── /api/copilot   OpenAI Responses API structured mission generation
+├── /api/copilot   Gemini structured mission generation
 └── /api/feedback  Optional consented feedback forwarding
 
 Stellar Testnet
@@ -217,7 +217,7 @@ timeouts.
 
 ## AI Mission Copilot
 
-Mission Copilot calls the OpenAI Responses API from `api/copilot.ts`. It uses
+Mission Copilot calls the Gemini API from `api/copilot.ts`. It uses
 strict structured output to produce:
 
 - mission title and summary;
@@ -227,9 +227,9 @@ strict structured output to produce:
 - suggested XLM budget;
 - deadline in Stellar ledgers.
 
-The default model is configurable with `OPENAI_MODEL`. The current default is
-`gpt-5.6-luna`, selected for a latency/cost-sensitive structured workflow.
-Without `OPENAI_API_KEY`, the product clearly identifies that AI is unavailable
+The default model is configurable with `GEMINI_MODEL`. The current default is
+`gemini-3.1-flash-lite`, selected for a latency/cost-sensitive structured workflow
+with a free API tier. Without `GEMINI_API_KEY`, the product clearly identifies that AI is unavailable
 and generates a deterministic local scope template rather than pretending a
 model was used.
 
@@ -248,7 +248,7 @@ model was used.
   identifies the invoked AgentRail function, and deduplicates accepted hashes.
 
 Wallet addresses and transaction hashes are not sent as Vercel Analytics event
-properties. No private key, Stellar secret seed, OpenAI API key, or webhook URL
+properties. No private key, Stellar secret seed, Gemini API key, or webhook URL
 is included in the browser bundle.
 
 ## Blue Belt Level 5 submission status
@@ -406,5 +406,5 @@ npm run deploy:testnet  # Deploy a new Testnet contract
 - [Stellar developer documentation](https://developers.stellar.org/)
 - [Freighter wallet integration](https://developers.stellar.org/docs/build/guides/freighter)
 - [Stellar agentic payments](https://developers.stellar.org/docs/build/agentic-payments/x402)
-- [OpenAI Responses API](https://developers.openai.com/api/docs/guides/text)
-- [OpenAI model catalog](https://developers.openai.com/api/docs/models)
+- [Gemini structured outputs](https://ai.google.dev/gemini-api/docs/structured-output)
+- [Gemini 3.1 Flash-Lite](https://ai.google.dev/gemini-api/docs/models/gemini-3.1-flash-lite)

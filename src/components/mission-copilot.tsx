@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
+import LoadingState from "@/components/ui/loading-state";
 
 export type MissionPlan = {
   title: string;
@@ -79,7 +80,7 @@ export function MissionCopilot({
   const [goal, setGoal] = useState("");
   const [plan, setPlan] = useState<MissionPlan | null>(null);
   const [loading, setLoading] = useState(false);
-  const [source, setSource] = useState<"openai" | "template" | null>(null);
+  const [source, setSource] = useState<"gemini" | "template" | null>(null);
   const charCount = useMemo(() => goal.trim().length, [goal]);
 
   async function generate() {
@@ -99,7 +100,7 @@ export function MissionCopilot({
       const payload = (await response.json()) as MissionPlan & { error?: string };
       if (!response.ok) throw new Error(payload.error ?? "Copilot request failed.");
       setPlan(payload);
-      setSource("openai");
+      setSource("gemini");
     } catch (error) {
       setPlan(localDraft(goal));
       setSource("template");
@@ -158,14 +159,13 @@ export function MissionCopilot({
           </div>
           <Button size="lg" onClick={generate} disabled={loading}>
             {loading ? (
-              <span className="size-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+              <LoadingState label="Designing mission" variant="Dots" className="text-slate-950 [&_span]:text-slate-950" />
             ) : (
-              <Sparkles size={16} />
+              <><Sparkles size={16} />Generate mission plan</>
             )}
-            {loading ? "Designing mission…" : "Generate mission plan"}
           </Button>
-          <p className="text-[10px] leading-4 text-slate-600">
-            The OpenAI key stays in a Vercel server function and is never exposed to the
+          <p className="text-xs leading-5 text-slate-500">
+            The Gemini key stays in a Vercel server function and is never exposed to the
             browser. Generated scopes should be reviewed before funding.
           </p>
         </CardContent>
@@ -194,8 +194,8 @@ export function MissionCopilot({
             <div className="flex items-start justify-between gap-3">
               <div>
                 <div className="flex items-center gap-2">
-                  <Badge variant={source === "openai" ? "default" : "secondary"}>
-                    {source === "openai" ? "OpenAI generated" : "Local template"}
+                  <Badge variant={source === "gemini" ? "default" : "secondary"}>
+                    {source === "gemini" ? "Gemini generated" : "Local template"}
                   </Badge>
                   <span className="text-[10px] text-slate-700">Review before funding</span>
                 </div>

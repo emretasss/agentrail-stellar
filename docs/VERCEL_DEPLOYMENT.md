@@ -40,8 +40,8 @@ VITE_AGENTRAIL_READ_SOURCE=GBRTZ4TDJDBMR3Y3S3IAFEQFFW2YGRR35XOPRMHGFRKFGY4PMOU45
 VITE_ENABLE_DEMO_MODE=false
 VITE_SENTRY_DSN=
 VITE_APP_VERSION=0.4.0
-OPENAI_API_KEY=your-server-only-openai-key
-OPENAI_MODEL=gpt-5.6-luna
+GEMINI_API_KEY=your-server-only-gemini-key
+GEMINI_MODEL=gemini-3.1-flash-lite
 FEEDBACK_WEBHOOK_URL=
 ```
 
@@ -49,7 +49,7 @@ FEEDBACK_WEBHOOK_URL=
 created, then paste its public DSN. `FEEDBACK_WEBHOOK_URL` is optional and should
 point to a private collector that accepts JSON POST requests.
 
-`OPENAI_API_KEY` and `FEEDBACK_WEBHOOK_URL` are server-only secrets. Never add a
+`GEMINI_API_KEY` and `FEEDBACK_WEBHOOK_URL` are server-only secrets. Never add a
 `VITE_` prefix to them. Every `VITE_` value is embedded in the browser bundle;
 never put a private key, Stellar secret seed, API secret, or administrator
 credential in those variables.

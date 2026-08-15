@@ -22,7 +22,7 @@ flowchart TB
     UI --> S["Sentry (optional)"]
     UI --> C["Mission Copilot API"]
     UI --> FB["Feedback API"]
-    C --> O["OpenAI Responses API"]
+    C --> O["Gemini Generate Content API"]
     FB --> W["Private feedback collector (optional)"]
     F --> RPC
     RPC --> SC["AgentRail Soroban contract"]
@@ -63,8 +63,8 @@ vendor dependencies. Motion respects `prefers-reduced-motion`.
 ## AI boundary
 
 `api/copilot.ts` is a Vercel server function. The browser submits only the
-mission goal; the server reads `OPENAI_API_KEY` and calls the OpenAI Responses
-API with strict structured output.
+mission goal; the server reads `GEMINI_API_KEY` and calls the Gemini Generate
+Content API with strict structured output.
 
 The model cannot:
 
@@ -143,7 +143,7 @@ records and must not appear in public screenshots or narrative summaries.
 - Vercel Analytics receives aggregate product events.
 - Wallet addresses and transaction hashes are not attached to Vercel events.
 - Sentry initializes only with `VITE_SENTRY_DSN`.
-- OpenAI and feedback secrets never use `VITE_` and never enter the browser
+- Gemini and feedback secrets never use `VITE_` and never enter the browser
   bundle.
 - Freighter owns private-key access; AgentRail never receives a secret seed.
 - Vercel responses disable caching for AI and feedback endpoints.
@@ -157,7 +157,7 @@ records and must not appear in public screenshots or narrative summaries.
 | Unfunded account | Explain Friendbot requirement |
 | Rejected signature | Report cancellation; do not imply submission |
 | Confirmation timeout | Provide hash for independent explorer verification |
-| OpenAI unavailable | Generate and label a local scope template |
+| Gemini unavailable | Generate and label a local scope template |
 | Feedback collector unavailable | Preserve local evidence and export |
 | Demo data enabled | Prevent all real escrow actions against sample identifiers |
 

@@ -22,7 +22,7 @@ Point out:
 - risk list;
 - suggested XLM budget;
 - deadline in Stellar ledgers;
-- server-side OpenAI integration.
+- server-side Gemini integration.
 
 Click **Use this plan in escrow**.
 
@@ -80,7 +80,7 @@ on:
 ## Recording checklist
 
 - No placeholder URL is visible.
-- Mission Copilot shows “OpenAI generated,” not local-template fallback.
+- Mission Copilot shows “Gemini generated,” not local-template fallback.
 - Sentry and Vercel Analytics screenshots contain real production data.
 - The final interaction links open successfully in an incognito browser.
 - Growth Lab accepts a real AgentRail hash and rejects a non-contract Testnet hash.

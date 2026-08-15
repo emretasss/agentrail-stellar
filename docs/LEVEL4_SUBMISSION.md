@@ -34,7 +34,7 @@ or fake video links.
 1. Create or link the Vercel project and configure the three GitHub Actions
    secrets documented in `docs/VERCEL_DEPLOYMENT.md`.
 2. Add every application environment variable from that document to Vercel.
-3. Add a real server-only `OPENAI_API_KEY`.
+3. Add a real server-only `GEMINI_API_KEY`.
 4. Push to `main` and confirm that `deploy-frontend` succeeds after both quality
    jobs, or manually dispatch the workflow from `main`.
 5. Enable Vercel Web Analytics.
