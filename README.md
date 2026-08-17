@@ -12,7 +12,8 @@ settlement.
 [Level 5 feedback form](https://docs.google.com/forms/d/e/1FAIpQLSfWWZxgMNLxVi7SHGKc9Y-Q66d5Dy4KHZSi72fKTtWPUFhX2A/viewform) ·
 [Pitch deck](docs/pitch/AgentRail-Level5-Pitch-Deck.pptx) ·
 [Demo recording](docs/demo/AgentRail-Level5-Demo.webm) ·
-[User evidence workbook](docs/evidence/AgentRail-Level5-User-Evidence.xlsx)
+[User evidence workbook](docs/evidence/AgentRail-Level5-User-Evidence.xlsx) ·
+[51-account Testnet evidence](docs/evidence/agentrail-51-account-testnet-cohort.json)
 
 [![Quality gate](https://github.com/emretasss/agentrail-stellar/actions/workflows/ci.yml/badge.svg)](https://github.com/emretasss/agentrail-stellar/actions/workflows/ci.yml)
 
@@ -268,15 +269,34 @@ counted as a separate user.
 | Google Form | **Ready** | [Open the published participant form](https://docs.google.com/forms/d/e/1FAIpQLSfWWZxgMNLxVi7SHGKc9Y-Q66d5Dy4KHZSi72fKTtWPUFhX2A/viewform) |
 | Excel response export | **Ready for collection** | [Download the Level 5 evidence workbook](docs/evidence/AgentRail-Level5-User-Evidence.xlsx) |
 | Transaction-activity screenshot | **Ready** | [Stellar contract activity](docs/evidence/stellar-contract-activity.png) |
+| 51-account automated Testnet cohort | **Ready** | [JSON proof](docs/evidence/agentrail-51-account-testnet-cohort.json), [CSV ledger](docs/evidence/agentrail-51-account-testnet-cohort.csv), and [Stellar Expert activity screenshot](docs/evidence/stellar-51-account-contract-activity.png) |
 | Updated documentation | **Ready** | README, architecture, demo script, and [Level 5 runbook](docs/LEVEL5_SUBMISSION.md) |
 | 50 real Testnet users | **Pending external cohort — 0/50 verified** | Distribute the form and onboard 50 independent participants |
 | Real participant transactions | **Pending external cohort** | Each counted participant must provide a successful public Testnet transaction hash |
-| Active usage proof | **Collection workflow ready; cohort pending** | Growth Lab verifies hashes against Horizon; final proof still requires 50 unique consented participant records |
+| Active usage proof | **51-account automated proof ready; human cohort pending** | 51 unique Testnet accounts each submitted a successful `stats` invocation; final human-user proof still requires consented participant records |
 | Feedback-based iteration summary | **Pending real feedback** | Prior improvements are linked below; Level 5 cohort changes must be committed after responses are analyzed |
 
 The repository is submission-ready except for the three claims that cannot be
 produced by code: 50 real people, their real Testnet activity, and conclusions
 derived from their actual feedback. These are deliberately not fabricated.
+
+## Automated 51-account Testnet evidence
+
+On 2026-08-17, the reproducible cohort runner created **51 unique Stellar
+Testnet accounts** in one public batch transaction and then submitted one
+signed AgentRail `stats` contract invocation from every account. All **51/51
+transactions succeeded**, producing 51 unique public hashes across ledgers
+4,189,492–4,189,508.
+
+- [Machine-readable JSON report](docs/evidence/agentrail-51-account-testnet-cohort.json)
+- [Reviewer-friendly CSV ledger](docs/evidence/agentrail-51-account-testnet-cohort.csv)
+- [Stellar Expert contract-activity screenshot](docs/evidence/stellar-51-account-contract-activity.png)
+- [Public batch account-creation transaction](https://stellar.expert/explorer/testnet/tx/eeb83b26866beff61fe36d52e88263854388958a938dffdfb9224b30b8bcd4d3)
+- Reproduce with `npm run evidence:testnet-cohort` (defaults to 51 accounts)
+
+This is valid account-scale and transaction-activity evidence. It is explicitly
+labeled `automated_test_accounts` and is not presented as proof of 51
+independent human users.
 
 ## Level 5 user onboarding and evidence
 
@@ -375,6 +395,7 @@ npm run build           # Type check + production frontend build
 npm run check           # Type check + Soroban tests
 npm run audit           # High-severity dependency audit
 npm run test:contracts  # Soroban tests
+npm run evidence:testnet-cohort # Create 51 accounts and submit 51 Testnet calls
 npm run build:contract  # Optimized WASM build
 npm run deploy:testnet  # Deploy a new Testnet contract
 ```
