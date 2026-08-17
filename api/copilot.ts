@@ -243,7 +243,7 @@ export default async function handler(request: Request): Promise<Response> {
             responseSchema: missionSchema,
           },
         }),
-        signal: AbortSignal.timeout(25_000),
+        signal: AbortSignal.any([request.signal, AbortSignal.timeout(25_000)]),
       },
     );
 

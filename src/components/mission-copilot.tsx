@@ -9,11 +9,12 @@ import {
   ShieldAlert,
   ShieldCheck,
   Sparkles,
+  Square,
   Wallet,
 } from "lucide-react";
 import { signMessage } from "@stellar/freighter-api";
 import { motion } from "framer-motion";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -104,10 +105,22 @@ export function MissionCopilot({
   const [plan, setPlan] = useState<MissionPlan | null>(null);
   const [loading, setLoading] = useState(false);
   const [source, setSource] = useState<"gemini" | "template" | null>(null);
+  const requestController = useRef<AbortController | null>(null);
   const charCount = useMemo(() => goal.trim().length, [goal]);
   const readiness = useMemo(() => assessMissionReadiness(goal), [goal]);
   const walletVerified =
     wallet?.networkPassphrase === stellarConfig.networkPassphrase;
+
+  useEffect(() => () => requestController.current?.abort(), []);
+
+  function stopGeneration() {
+    requestController.current?.abort();
+    requestController.current = null;
+    setLoading(false);
+    toast.info("Mission design stopped", {
+      description: "No plan was applied. Your draft remains saved.",
+    });
+  }
 
   async function generate() {
     if (!walletVerified || !wallet) {
@@ -139,6 +152,9 @@ export function MissionCopilot({
       });
       return;
     }
+    const controller = new AbortController();
+    requestController.current?.abort();
+    requestController.current = controller;
     setLoading(true);
     try {
       const issuedAt = Date.now();
@@ -153,6 +169,7 @@ export function MissionCopilot({
         address: wallet.address,
         networkPassphrase: stellarConfig.networkPassphrase,
       });
+      if (controller.signal.aborted) return;
       if (
         signed.error ||
         typeof signed.signedMessage !== "string" ||
@@ -172,6 +189,7 @@ export function MissionCopilot({
           signature: signed.signedMessage,
           issuedAt,
         }),
+        signal: controller.signal,
       });
       const payload = (await response.json()) as MissionPlan & { error?: string };
       if (!response.ok) {
@@ -183,6 +201,9 @@ export function MissionCopilot({
       setPlan(payload);
       setSource("gemini");
     } catch (error) {
+      if (controller.signal.aborted || (error instanceof DOMException && error.name === "AbortError")) {
+        return;
+      }
       if (error instanceof WalletAuthorizationError) {
         toast.error("Wallet authorization required", { description: error.message });
         return;
@@ -196,7 +217,10 @@ export function MissionCopilot({
             : "A safe local scope template was generated instead.",
       });
     } finally {
-      setLoading(false);
+      if (requestController.current === controller) {
+        requestController.current = null;
+        setLoading(false);
+      }
     }
   }
 
@@ -261,21 +285,28 @@ export function MissionCopilot({
               </div>
             </div>
           )}
-          <Button
-            size="lg"
-            onClick={() => walletVerified ? void generate() : void onConnect()}
-            disabled={loading || connecting}
-          >
-            {loading ? (
-              <LoadingState label="Designing mission" variant="Dots" className="text-white [&_span]:text-white" />
-            ) : connecting ? (
-              <LoadingState label="Connecting wallet" variant="Dots" className="text-white [&_span]:text-white" />
-            ) : !walletVerified ? (
-              <><Wallet size={16} />Connect wallet to generate</>
-            ) : (
-              <><Sparkles size={16} />Generate mission plan</>
+          <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+            <Button
+              size="lg"
+              onClick={() => walletVerified ? void generate() : void onConnect()}
+              disabled={loading || connecting}
+            >
+              {loading ? (
+                <LoadingState label="Designing mission" variant="Dots" className="text-white [&_span]:text-white" />
+              ) : connecting ? (
+                <LoadingState label="Connecting wallet" variant="Dots" className="text-white [&_span]:text-white" />
+              ) : !walletVerified ? (
+                <><Wallet size={16} />Connect wallet to generate</>
+              ) : (
+                <><Sparkles size={16} />Generate mission plan</>
+              )}
+            </Button>
+            {loading && (
+              <Button size="lg" variant="destructive" onClick={stopGeneration}>
+                <Square size={13} fill="currentColor" /> Stop
+              </Button>
             )}
-          </Button>
+          </div>
           <p className="text-xs leading-5 text-slate-500">
             The Gemini key stays in a Vercel server function and is never exposed to the
             browser. Generated scopes should be reviewed before funding.
