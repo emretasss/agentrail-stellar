@@ -40,7 +40,11 @@ Workspaces:
 - Command Center
 - Agent Network
 - Escrow Operations
+- Treasury Console
+- Reputation Lab
+- Mission Playbooks
 - Mission Copilot
+- Network Explorer
 - Growth Lab
 - Validation Hub
 

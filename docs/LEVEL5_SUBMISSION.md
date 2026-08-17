@@ -13,9 +13,9 @@ feedback, or reuse a transaction hash for multiple participants.
 | Testnet contract | [Stellar Expert](https://stellar.expert/explorer/testnet/contract/CB6QV6VUJH4FRSLZRTOV2HBIIXSZ4V2YRTCE3S5U4KCLZE7QFW4YTLV5) | Ready |
 | Participant form | [Published Google Form](https://docs.google.com/forms/d/e/1FAIpQLSfWWZxgMNLxVi7SHGKc9Y-Q66d5Dy4KHZSi72fKTtWPUFhX2A/viewform) | Ready |
 | Pitch deck | [AgentRail-Level5-Pitch-Deck.pptx](pitch/AgentRail-Level5-Pitch-Deck.pptx) | Ready |
-| Walkthrough video | [AgentRail-Level5-Demo.webm](demo/AgentRail-Level5-Demo.webm) | Ready |
-| Excel evidence workbook | [AgentRail-Level5-User-Evidence.xlsx](evidence/AgentRail-Level5-User-Evidence.xlsx) | Ready for real responses |
-| Growth Lab proof screenshot | [agentrail-growth-lab.png](screenshots/agentrail-growth-lab.png) | Ready |
+| Walkthrough video | [AgentRail-Level5-Demo.webm](demo/AgentRail-Level5-Demo.webm) | 42-second preview ready; full signed-wallet demo pending |
+| Excel evidence workbook | [AgentRail-Level5-User-Evidence.xlsx](evidence/AgentRail-Level5-User-Evidence.xlsx) | Template ready; real Google Forms export pending |
+| Growth Lab proof screenshot | [agentrail-growth-lab.jpg](screenshots/agentrail-growth-lab.jpg) | Ready — refreshed from live v0.4 UI |
 | Transaction screenshot | [stellar-contract-activity.png](evidence/stellar-contract-activity.png) | Ready |
 | 51-account JSON evidence | [agentrail-51-account-testnet-cohort.json](evidence/agentrail-51-account-testnet-cohort.json) | Ready — 51/51 successful |
 | 51-account CSV evidence | [agentrail-51-account-testnet-cohort.csv](evidence/agentrail-51-account-testnet-cohort.csv) | Ready — 51 unique accounts and hashes |
@@ -156,7 +156,7 @@ environment variables, private deliverables, and participant emails off-screen.
 - [x] Linked Google response Sheet
 - [x] Excel evidence workbook linked from README
 - [x] Pitch deck linked from README
-- [x] Product walkthrough linked from README
+- [x] Short product preview linked from README
 - [x] Public Testnet contract and transaction evidence
 - [x] Transaction-activity screenshot
 - [x] 51 unique automated Testnet accounts verified
@@ -167,7 +167,7 @@ environment variables, private deliverables, and participant emails off-screen.
 - [ ] Aggregate active-usage evidence captured without private emails
 - [ ] Real feedback summarized
 - [ ] At least one cohort-driven change implemented and linked to its commit
-- [ ] Final public video demonstrates the signed transaction lifecycle
+- [ ] Final public walkthrough demonstrates the complete signed transaction lifecycle and real use cases
 
 Submit only after every unchecked item has real evidence. The external cohort
 is the remaining blocker; it cannot be completed safely or honestly by source

@@ -20,6 +20,22 @@ settlement.
 > Level 5 submission assets are repository-hosted so reviewers can download the
 > exact PPTX, WebM, Excel workbook, and transaction-activity screenshot.
 
+## Project at a glance
+
+| Item | Current state |
+| --- | --- |
+| Product | Trust, escrow, evidence, and reputation workspace for paid AI-agent work |
+| Release | `v0.4.0` — Growth Lab and expanded Trust OS workspaces |
+| Network | Stellar Testnet |
+| Frontend | React 19, TypeScript, Vite, Tailwind CSS, Radix UI, Framer Motion |
+| Wallet and chain | Freighter, Stellar SDK, Soroban RPC, Horizon verification |
+| Smart contract | Rust/Soroban escrow, registry, dispute, and reputation contract |
+| AI assistance | Server-side Gemini structured mission generation with an explicitly labeled local fallback |
+| Public engineering history | 93 non-merge commits on `main` as of 2026-08-17 |
+| Public activity proof | 6 lifecycle transactions + 51 successful automated cohort invocations |
+| Independent human cohort | **0/50 verified — still required for Level 5 completion** |
+| Live product | [agentrail-stellar.vercel.app](https://agentrail-stellar.vercel.app) |
+
 ## Product screenshots
 
 ### Growth Lab — verifiable Testnet onboarding
@@ -28,26 +44,28 @@ The v0.4 Growth Lab turns onboarding into a measurable quest: participants
 choose a role and mission, verify a successful AgentRail transaction through
 Horizon, submit feedback, and invite the next tester.
 
-![AgentRail Growth Lab](docs/screenshots/agentrail-growth-lab.png)
+![AgentRail Growth Lab](docs/screenshots/agentrail-growth-lab.jpg)
 
 ### Live Command Center
 
-Contract-backed metrics, protocol health, escrow activity, and the complete
-settlement lifecycle are presented in a focused operational dashboard.
+The current Command Center prioritizes missions that need attention, live
+contract metrics, reusable playbooks, settlement-ranked agents, and protocol
+activity in one operational view.
 
 ![AgentRail Command Center](docs/screenshots/agentrail-command-center.jpg)
 
 ### Verifiable Agent Network
 
-Buyers can discover registered AI services, inspect their on-chain track record,
-and move directly into a protected job flow.
+Buyers can search, filter, compare, watch, and hire registered AI services while
+inspecting settlement-backed trust signals and on-chain performance.
 
 ![AgentRail Agent Network](docs/screenshots/agentrail-agent-network.jpg)
 
 ### Level 5 Validation Hub
 
-The submission control room keeps implemented product capabilities separate
-from evidence that still requires real users or an external publishing step.
+The submission control room keeps implemented product capabilities, artifact
+links, automated account-scale proof, and genuinely pending human evidence
+separate.
 
 ![AgentRail Validation Hub](docs/screenshots/agentrail-validation-hub.jpg)
 
@@ -267,24 +285,26 @@ counted as a separate user.
 | Requirement | Status | Evidence / next action |
 | --- | --- | --- |
 | Public GitHub repository | **Ready** | [Public repository](https://github.com/emretasss/agentrail-stellar) |
-| 20+ meaningful commits | **Ready** | 26 meaningful commits on `main`; the major product commit is linked below |
+| 20+ meaningful commits | **Ready** | 93 non-merge commits on `main` as of 2026-08-17; the major product commit is linked below |
 | Live deployed application | **Ready** | [Vercel production](https://agentrail-stellar.vercel.app) |
 | Product stability and UX | **Ready** | v0.4 Growth Lab, responsive workspace, guided role missions, Horizon proof verification, typed transaction states, RPC recovery, seven contract tests, and CI |
-| Professional pitch deck | **Ready** | [Download PPTX](docs/pitch/AgentRail-Level5-Pitch-Deck.pptx) |
-| Product walkthrough | **Ready** | [Download WebM demo](docs/demo/AgentRail-Level5-Demo.webm) and follow the live-transaction script in [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md) |
+| Professional pitch deck | **Ready** | [Download the refreshed PPTX](docs/pitch/AgentRail-Level5-Pitch-Deck.pptx); current product screenshots and 57 public Testnet transactions are reflected |
+| Product walkthrough | **Partial** | [Download the 42-second WebM preview](docs/demo/AgentRail-Level5-Demo.webm); the final signed-wallet walkthrough in [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md) is still required |
 | Google Form | **Ready** | [Open the published participant form](https://docs.google.com/forms/d/e/1FAIpQLSfWWZxgMNLxVi7SHGKc9Y-Q66d5Dy4KHZSi72fKTtWPUFhX2A/viewform) |
-| Excel response export | **Ready for collection** | [Download the Level 5 evidence workbook](docs/evidence/AgentRail-Level5-User-Evidence.xlsx) |
+| Excel response export | **Template ready; real export pending** | [Download the Level 5 evidence workbook](docs/evidence/AgentRail-Level5-User-Evidence.xlsx); it currently contains 0 responses and is not a substitute for the final Google Forms export |
 | Transaction-activity screenshot | **Ready** | [Stellar contract activity](docs/evidence/stellar-contract-activity.png) |
 | 51-account automated Testnet cohort | **Ready** | [JSON proof](docs/evidence/agentrail-51-account-testnet-cohort.json), [CSV ledger](docs/evidence/agentrail-51-account-testnet-cohort.csv), and [Stellar Expert activity screenshot](docs/evidence/stellar-51-account-contract-activity.png) |
-| Updated documentation | **Ready** | README, architecture, demo script, and [Level 5 runbook](docs/LEVEL5_SUBMISSION.md) |
+| Updated documentation | **Ready** | README, architecture, refreshed screenshot gallery, pitch deck, demo script, and [Level 5 runbook](docs/LEVEL5_SUBMISSION.md) |
 | 50 real Testnet users | **Pending external cohort — 0/50 verified** | Distribute the form and onboard 50 independent participants |
 | Real participant transactions | **Pending external cohort** | Each counted participant must provide a successful public Testnet transaction hash |
 | Active usage proof | **51-account automated proof ready; human cohort pending** | 51 unique Testnet accounts each submitted a successful `stats` invocation; final human-user proof still requires consented participant records |
 | Feedback-based iteration summary | **Pending real feedback** | Prior improvements are linked below; Level 5 cohort changes must be committed after responses are analyzed |
 
-The repository is submission-ready except for the three claims that cannot be
-produced by code: 50 real people, their real Testnet activity, and conclusions
-derived from their actual feedback. These are deliberately not fabricated.
+**Overall result: Level 5 is not complete yet.** The remaining external work is
+50 independent participants, their successful AgentRail transactions, the real
+Google Forms response export, an aggregate usage/feedback summary, at least one
+cohort-driven improvement commit, and a final full signed-wallet demo. These
+items are deliberately not fabricated or inferred from automated accounts.
 
 ## Automated 51-account Testnet evidence
 
