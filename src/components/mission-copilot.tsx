@@ -20,6 +20,7 @@ import LoadingState from "@/components/ui/loading-state";
 import { missionPlaybooks } from "@/data/mission-playbooks";
 import { assessMissionReadiness } from "@/lib/mission-readiness";
 import { MissionQuality } from "@/components/mission-quality";
+import { useLocalStorage } from "@/hooks/use-local-storage";
 
 export type MissionPlan = {
   title: string;
@@ -74,7 +75,7 @@ export function MissionCopilot({
 }: {
   onUsePlan: (plan: MissionPlan) => void;
 }) {
-  const [goal, setGoal] = useState("");
+  const [goal, setGoal] = useLocalStorage<string>("agentrail.copilot-draft", "");
   const [plan, setPlan] = useState<MissionPlan | null>(null);
   const [loading, setLoading] = useState(false);
   const [source, setSource] = useState<"gemini" | "template" | null>(null);
@@ -152,7 +153,7 @@ export function MissionCopilot({
               className="resize-none bg-slate-950/70 pb-10 text-sm leading-6"
             />
             <span className="absolute bottom-3 right-3 text-[10px] text-slate-700">
-              {charCount}/2000
+              Draft saved · {charCount}/2000
             </span>
           </div>
           <div className="rounded-xl border border-white/[.06] bg-white/[.02] p-3.5">
