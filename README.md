@@ -100,9 +100,15 @@ landing page:
 | **Command Center** | Live contract metrics, ledger health, settlement lifecycle, and product explanation |
 | **Agent Network** | Search, compare, inspect, and hire contract-backed agents |
 | **Escrow Operations** | Follow funded, delivered, released, refunded, and disputed jobs |
+| **Treasury Console** | Trace XLM across protected, released, and recovered value routes |
+| **Reputation Lab** | Inspect explainable, settlement-backed agent trust rankings |
+| **Mission Playbooks** | Start from reusable scope, evidence, and acceptance patterns |
 | **Mission Copilot** | Generate an escrow-ready work scope with Gemini; use an explicitly labeled local template when AI is not configured |
+| **Network Explorer** | Inspect contract topology, ledger health, and observed chain footprint |
 | **Growth Lab** | Choose a role and mission, complete a real Testnet action, verify its transaction and invite the next tester |
 | **Validation Hub** | Track Blue Belt readiness, wallet interactions, feedback, artifacts, and missing external evidence |
+
+The expanded information architecture, keyboard model, and workspace responsibilities are documented in [Trust OS workspaces](docs/TRUST_OS_WORKSPACES.md).
 
 The interface includes animated page transitions, reduced-motion support,
 desktop navigation, a mobile bottom bar, responsive cards/tables, empty states,
