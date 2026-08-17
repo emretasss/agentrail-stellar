@@ -20,6 +20,7 @@ import type { ActivityEvent, Agent, Job, JobStatus } from "@/types/agentrail";
 import { DeadlineHealth } from "@/components/deadline-health";
 import { activityToCsv, downloadTextFile } from "@/lib/export";
 import { Input } from "@/components/ui/input";
+import { JobHealthSummary } from "@/components/job-health-summary";
 
 const statusVariant: Record<JobStatus, "default" | "secondary" | "warning" | "destructive"> = {
   Funded: "secondary",
@@ -69,7 +70,7 @@ export function JobActivity({
   }, [agents, jobs, query, sort, status]);
   const statusFilters: Array<JobStatus | "All"> = ["All", "Funded", "Delivered", "Released", "Refunded", "Disputed"];
   return (
-    <section className="grid gap-3 xl:grid-cols-[1.4fr_.75fr]">
+    <><JobHealthSummary jobs={jobs} /><section className="grid gap-3 xl:grid-cols-[1.4fr_.75fr]">
       <Card>
         <CardHeader className="flex-row items-center justify-between">
           <div>
@@ -262,6 +263,6 @@ export function JobActivity({
           </p>
         </CardContent>
       </Card>
-    </section>
+    </section></>
   );
 }
