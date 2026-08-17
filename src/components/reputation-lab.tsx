@@ -1,6 +1,7 @@
 import { Award, BadgeCheck, Bot, Fingerprint, ShieldCheck, Sparkles, Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { TrustScoreMethodology } from "@/components/trust-score-methodology";
 import type { Agent, Job } from "@/types/agentrail";
 import { useState } from "react";
 
@@ -36,6 +37,8 @@ export function ReputationLab({ agents, jobs }: { agents: Agent[]; jobs: Job[] }
           return <Card key={String(label)}><CardContent className="p-5"><MetricIcon size={17} className="text-[#78e8ff]" /><span className="mt-5 block text-[10px] uppercase tracking-[.13em] text-slate-600">{String(label)}</span><strong className="mt-1 block text-2xl text-slate-100">{String(value)} <small className="text-xs font-normal text-slate-600">{String(suffix)}</small></strong></CardContent></Card>;
         })}
       </section>
+
+      <TrustScoreMethodology />
 
       <Card>
         <CardHeader><CardTitle className="text-sm">Agent trust index</CardTitle><p className="text-xs text-slate-600">Explainable ranking—never a black box</p><div className="mt-3 flex gap-2 overflow-x-auto">{categories.map((item) => <button key={item} onClick={() => setCategory(item)} className={`shrink-0 rounded-full border px-3 py-1.5 text-[9px] font-semibold ${category === item ? "border-[#756dff]/30 bg-[#756dff]/12 text-[#bcb8ff]" : "border-white/[.07] text-[#8f9ab0]"}`}>{item}</button>)}</div></CardHeader>
