@@ -5,8 +5,10 @@ import {
   BriefcaseBusiness,
   CircleDollarSign,
   Search,
+  SlidersHorizontal,
   Star,
   Zap,
+  X,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useMemo, useState } from "react";
@@ -45,15 +47,21 @@ export function Marketplace({
   onHire: (agent: Agent) => void;
 }) {
   const [query, setQuery] = useState("");
+  const [category, setCategory] = useState("All");
+  const [sort, setSort] = useState<"trust" | "price" | "experience">("trust");
+  const categories = useMemo(() => ["All", ...new Set(agents.map((agent) => agent.category))], [agents]);
   const filtered = useMemo(() => {
     const normalized = query.trim().toLowerCase();
-    if (!normalized) return agents;
-    return agents.filter((agent) =>
-      [agent.name, agent.handle, agent.category].some((value) =>
-        value.toLowerCase().includes(normalized),
-      ),
-    );
-  }, [agents, query]);
+    return agents
+      .filter((agent) => category === "All" || agent.category === category)
+      .filter((agent) => !normalized || [agent.name, agent.handle, agent.category].some((value) => value.toLowerCase().includes(normalized)))
+      .sort((a, b) => {
+        if (sort === "price") return Number(a.priceStroops - b.priceStroops);
+        if (sort === "experience") return b.completed - a.completed;
+        return b.rating * b.successRate - a.rating * a.successRate;
+      });
+  }, [agents, category, query, sort]);
+  const filteredActive = query.trim() || category !== "All" || sort !== "trust";
 
   return (
     <Card className="min-w-0">
@@ -76,6 +84,23 @@ export function Marketplace({
         </div>
       </CardHeader>
       <CardContent>
+        <div className="mb-4 flex flex-col gap-3 border-b border-white/[.055] pb-4">
+          <div className="flex items-center gap-2 overflow-x-auto pb-1">
+            <SlidersHorizontal size={13} className="mr-1 shrink-0 text-slate-600" />
+            {categories.map((item) => (
+              <button key={item} onClick={() => setCategory(item)} className={cn("shrink-0 rounded-full border px-3 py-1.5 text-[9px] font-semibold transition", category === item ? "border-[#746cff]/30 bg-[#746cff]/10 text-[#b8b4ff]" : "border-white/[.06] text-slate-600 hover:text-slate-300")}>{item}</button>
+            ))}
+          </div>
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-[10px] text-slate-600">{filtered.length} of {agents.length} agents</span>
+            <div className="flex items-center gap-2">
+              {filteredActive && <button className="flex items-center gap-1 text-[9px] text-slate-600 hover:text-slate-300" onClick={() => { setQuery(""); setCategory("All"); setSort("trust"); }}><X size={10} /> Reset</button>}
+              <select aria-label="Sort agents" value={sort} onChange={(event) => setSort(event.target.value as typeof sort)} className="rounded-lg border border-white/[.07] bg-[#080916] px-2.5 py-1.5 text-[9px] text-slate-500 outline-none">
+                <option value="trust">Highest trust</option><option value="experience">Most experienced</option><option value="price">Lowest price</option>
+              </select>
+            </div>
+          </div>
+        </div>
         <div className="grid gap-3 md:grid-cols-2">
           {filtered.map((agent, index) => (
             <motion.article
