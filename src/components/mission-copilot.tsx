@@ -160,6 +160,7 @@ export function MissionCopilot({
             <div className="flex items-center justify-between text-[10px]"><span className="font-semibold text-slate-500">Mission readiness</span><strong className={readiness.score >= 75 ? "text-[#61f6c2]" : "text-amber-300"}>{readiness.score}%</strong></div>
             <div className="mt-2 h-1 overflow-hidden rounded-full bg-white/[.05]"><div className="h-full rounded-full bg-gradient-to-r from-[#746cff] to-[#61f6c2] transition-all duration-500" style={{ width: `${readiness.score}%` }} /></div>
             <div className="mt-3 flex flex-wrap gap-2">{readiness.checks.map(({ label, passed }) => <span key={label} className={`rounded-full border px-2 py-1 text-[8px] ${passed ? "border-[#61f6c2]/10 bg-[#61f6c2]/[.04] text-[#79f7cb]" : "border-white/[.06] text-slate-700"}`}>{passed ? "✓" : "+"} {label}</span>)}</div>
+            {readiness.nextSuggestion && <p className="mt-3 rounded-lg border border-[#ffbf69]/10 bg-[#ffbf69]/[.035] px-3 py-2 text-[10px] leading-4 text-[#d8c199]"><strong className="text-[#ffcf8c]">Next:</strong> {readiness.nextSuggestion}</p>}
           </div>
           <Button size="lg" onClick={generate} disabled={loading}>
             {loading ? (
