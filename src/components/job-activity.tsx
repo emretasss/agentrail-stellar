@@ -3,6 +3,7 @@ import {
   CheckCircle2,
   CircleDot,
   ExternalLink,
+  Download,
   FileCheck2,
   LockKeyhole,
   RotateCcw,
@@ -16,6 +17,7 @@ import { decimalFromStroops } from "@/lib/stellar";
 import { cn } from "@/lib/utils";
 import type { ActivityEvent, Agent, Job, JobStatus } from "@/types/agentrail";
 import { DeadlineHealth } from "@/components/deadline-health";
+import { activityToCsv, downloadTextFile } from "@/lib/export";
 
 const statusVariant: Record<JobStatus, "default" | "secondary" | "warning" | "destructive"> = {
   Funded: "secondary",
@@ -204,9 +206,10 @@ export function JobActivity({
       </Card>
 
       <Card id="activity" className="scroll-mt-20">
-        <CardHeader>
-          <CardTitle className="text-sm">Live activity</CardTitle>
-          <p className="text-xs text-slate-600">Local product and on-chain events</p>
+        <CardHeader className="flex-row items-start justify-between">
+          <div><CardTitle className="text-sm">Live activity</CardTitle>
+          <p className="text-xs text-slate-600">Local product and on-chain events</p></div>
+          <Button size="sm" variant="ghost" aria-label="Export activity as CSV" onClick={() => downloadTextFile("agentrail-activity.csv", activityToCsv(events), "text/csv;charset=utf-8")}><Download size={12} /> CSV</Button>
         </CardHeader>
         <CardContent className="grid gap-1">
           {events.slice(0, 5).map((event, index) => (
