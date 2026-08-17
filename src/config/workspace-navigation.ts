@@ -8,6 +8,7 @@ import {
   ShieldCheck,
   TrendingUp,
   Users,
+  WalletCards,
   type LucideIcon,
 } from "lucide-react";
 
@@ -19,7 +20,8 @@ export type AppView =
   | "growth"
   | "validation"
   | "network"
-  | "reputation";
+  | "reputation"
+  | "treasury";
 
 export type WorkspaceNavItem = {
   id: AppView;
@@ -54,6 +56,14 @@ export const workspaceNavigation: WorkspaceNavItem[] = [
     shortLabel: "Jobs",
     icon: BriefcaseBusiness,
     description: "Manage funding, delivery and settlement",
+    group: "workspace",
+  },
+  {
+    id: "treasury",
+    label: "Treasury console",
+    shortLabel: "Value",
+    icon: WalletCards,
+    description: "Track protected value and settlement routes",
     group: "workspace",
   },
   {

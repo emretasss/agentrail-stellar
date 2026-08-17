@@ -29,6 +29,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ValidationHub } from "@/components/validation-hub";
 import { NetworkExplorer } from "@/components/network-explorer";
 import { ReputationLab } from "@/components/reputation-lab";
+import { TreasuryConsole } from "@/components/treasury-console";
 import {
   initialActivity,
   initialRegisterForm,
@@ -768,6 +769,8 @@ function App() {
             )}
 
             {activeView === "reputation" && <ReputationLab agents={agents} jobs={jobs} />}
+
+            {activeView === "treasury" && <TreasuryConsole jobs={jobs} />}
 
             {activeView === "growth" && (
               <GrowthLab
