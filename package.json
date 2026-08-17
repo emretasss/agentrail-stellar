@@ -9,9 +9,12 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "tsc && vite build",
-    "check": "tsc --noEmit && cargo test",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "check": "tsc --noEmit && vitest run && cargo test",
     "audit": "npm audit --audit-level=high",
     "preview": "vite preview --host 0.0.0.0",
+    "evidence:testnet-cohort": "node scripts/run-testnet-cohort.mjs",
     "test:contracts": "cargo test",
     "build:contract": "stellar contract build --package agent-pay --optimize",
     "deploy:testnet": "bash scripts/deploy-testnet.sh"
@@ -47,6 +50,7 @@
     "@vitejs/plugin-react": "^6.0.4",
     "playwright-core": "^1.60.0",
     "typescript": "^5.7.2",
-    "vite": "^8.1.5"
+    "vite": "^8.1.5",
+    "vitest": "^4.1.10"
   }
 }
