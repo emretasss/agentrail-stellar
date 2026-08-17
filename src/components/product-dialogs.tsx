@@ -32,6 +32,7 @@ import {
 } from "@/lib/product-analytics";
 import { decimalFromStroops } from "@/lib/stellar";
 import { cn } from "@/lib/utils";
+import { EscrowPreview } from "@/components/escrow-preview";
 import type {
   Agent,
   Feedback,
@@ -234,6 +235,7 @@ export function CreateJobDialog({
               />
             </Field>
           </div>
+          <EscrowPreview amount={amount} ledgers={ledgers} brief={brief} />
           <TransactionStatus stage={stage} />
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
