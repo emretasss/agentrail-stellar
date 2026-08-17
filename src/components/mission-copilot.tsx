@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import LoadingState from "@/components/ui/loading-state";
+import { missionPlaybooks } from "@/data/mission-playbooks";
 
 export type MissionPlan = {
   title: string;
@@ -27,12 +28,6 @@ export type MissionPlan = {
   recommendedBudgetXlm: number;
   deadlineLedgers: number;
 };
-
-const prompts = [
-  "Research five Stellar payment tools and deliver a sourced comparison for a product team.",
-  "Review our public API documentation and produce a prioritized developer-experience audit.",
-  "Monitor a public dataset for anomalies and return a concise evidence-backed incident brief.",
-];
 
 function localDraft(goal: string): MissionPlan {
   const shortGoal = goal.trim().replace(/\s+/g, " ");
@@ -134,13 +129,13 @@ export function MissionCopilot({
         </div>
         <CardContent className="grid gap-4 p-5 sm:p-6">
           <div className="flex flex-wrap gap-2">
-            {prompts.map((prompt) => (
+            {missionPlaybooks.slice(0, 4).map((playbook) => (
               <button
-                key={prompt}
-                onClick={() => setGoal(prompt)}
+                key={playbook.id}
+                onClick={() => setGoal(playbook.prompt)}
                 className="rounded-full border border-white/[.07] bg-white/[.025] px-3 py-1.5 text-left text-[10px] text-slate-500 transition hover:border-violet-400/25 hover:text-slate-300"
               >
-                {prompt.split(" ").slice(0, 5).join(" ")}…
+                {playbook.title}
               </button>
             ))}
           </div>
