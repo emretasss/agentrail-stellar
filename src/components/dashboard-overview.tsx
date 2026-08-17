@@ -1,56 +1,33 @@
 import {
+  ArrowRight,
   Bot,
   CircleDollarSign,
   Clock3,
   LockKeyhole,
   Plus,
+  Radio,
   RefreshCw,
   ShieldCheck,
   Sparkles,
+  WandSparkles,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
+import { ActionQueue } from "@/components/dashboard/action-queue";
+import { PlaybookShelf } from "@/components/dashboard/playbook-shelf";
+import { AgentWatchlist } from "@/components/dashboard/agent-watchlist";
 import { ProtocolPulse } from "@/components/protocol-pulse";
-import { MissionFunnel } from "@/components/mission-funnel";
-import type { Job } from "@/types/agentrail";
+import type { MissionPlaybook } from "@/data/mission-playbooks";
+import type { Agent, Job } from "@/types/agentrail";
 
-type Stats = {
-  agents: number;
-  jobs: number;
-  locked: string;
-  released: string;
-};
+type Stats = { agents: number; jobs: number; locked: string; released: string };
 
 const metricStyle = [
-  {
-    key: "locked" as const,
-    label: "Value in escrow",
-    suffix: " XLM",
-    icon: LockKeyhole,
-    accent: "violet",
-  },
-  {
-    key: "released" as const,
-    label: "Settled volume",
-    suffix: " XLM",
-    icon: CircleDollarSign,
-    accent: "mint",
-  },
-  {
-    key: "jobs" as const,
-    label: "Total jobs",
-    suffix: "",
-    icon: Clock3,
-    accent: "cyan",
-  },
-  {
-    key: "agents" as const,
-    label: "Active agents",
-    suffix: "",
-    icon: Bot,
-    accent: "rose",
-  },
+  { key: "locked" as const, label: "Protected now", suffix: " XLM", icon: LockKeyhole, accent: "violet", hint: "Live escrow value" },
+  { key: "released" as const, label: "Settled volume", suffix: " XLM", icon: CircleDollarSign, accent: "mint", hint: "Released to agents" },
+  { key: "jobs" as const, label: "Missions", suffix: "", icon: Clock3, accent: "cyan", hint: "Across every state" },
+  { key: "agents" as const, label: "Verified agents", suffix: "", icon: Bot, accent: "rose", hint: "Active on the network" },
 ];
 
 export function DashboardOverview({
@@ -58,161 +35,90 @@ export function DashboardOverview({
   dataMode,
   latestLedger,
   jobs,
+  agents,
   onCreateJob,
   onRegisterAgent,
   onRefresh,
+  onOpenJobs,
+  onOpenAgents,
+  onOpenLibrary,
+  onOpenCopilot,
+  onUsePlaybook,
+  onHireAgent,
 }: {
   stats: Stats;
   dataMode: "loading" | "live" | "demo" | "error";
   latestLedger: number | null;
   jobs: Job[];
+  agents: Agent[];
   onCreateJob: () => void;
   onRegisterAgent: () => void;
   onRefresh: () => void;
+  onOpenJobs: () => void;
+  onOpenAgents: () => void;
+  onOpenLibrary: () => void;
+  onOpenCopilot: () => void;
+  onUsePlaybook: (playbook: MissionPlaybook) => void;
+  onHireAgent: (agent: Agent) => void;
 }) {
-  const lifecycle = [
-    { label: "Registered agents", value: stats.agents, icon: Bot },
-    { label: "Jobs created", value: stats.jobs, icon: Clock3 },
-    { label: "XLM settled", value: stats.released, icon: CircleDollarSign },
-  ];
+  const attentionCount = jobs.filter((job) => job.status === "Delivered" || job.status === "Disputed").length;
 
   return (
-    <>
-      <section className="workspace-hero relative mb-5 flex flex-col justify-between gap-5 overflow-hidden rounded-2xl border border-white/[.075] p-5 sm:p-6 xl:flex-row xl:items-end">
-        <div className="workspace-hero-orb" />
-        <div className="relative">
-          <div className="mb-3 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[.16em] text-[#78e8ff]">
-            <Sparkles size={14} />
-            Autonomous commerce protocol
+    <div className="grid gap-4">
+      <section className="dashboard-command-hero relative overflow-hidden rounded-2xl border border-white/[.1] px-5 py-6 sm:px-7 sm:py-8">
+        <div className="dashboard-command-grid" />
+        <div className="relative grid gap-8 xl:grid-cols-[1fr_auto] xl:items-end">
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge className="border-[#69e8b6]/20 bg-[#69e8b6]/[.08] text-[#8df0c8]"><Radio size={10} className="animate-pulse" /> Stellar Testnet live</Badge>
+              {attentionCount > 0 && <Badge variant="warning">{attentionCount} mission{attentionCount === 1 ? "" : "s"} need attention</Badge>}
+            </div>
+            <h2 className="mt-5 max-w-3xl text-3xl font-semibold tracking-[-0.05em] text-white sm:text-4xl">Put AI work on <span className="workspace-gradient-text">verifiable rails.</span></h2>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-[#a8b2c6] sm:text-[15px]">Start from a proven mission template, hire a settlement-ranked agent, and release XLM only when the evidence meets your terms.</p>
           </div>
-          <h2 className="max-w-3xl text-2xl font-semibold tracking-[-0.035em] text-slate-50 sm:text-3xl">
-            Command the <span className="workspace-gradient-text">agent economy.</span>
-          </h2>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-            Discover verified services, protect every payment with Soroban escrow,
-            and build portable on-chain reputation.
-          </p>
-        </div>
-        <div className="relative flex flex-col gap-2 sm:flex-row">
-          <Button variant="outline" onClick={onRegisterAgent}>
-            <Bot size={16} />
-            Publish an agent
-          </Button>
-          <Button onClick={onCreateJob}>
-            <Plus size={16} />
-            Create a job
-          </Button>
+          <div className="grid gap-2 sm:grid-cols-2 xl:min-w-[390px]">
+            <Button size="lg" variant="outline" onClick={onOpenCopilot} className="h-12 rounded-xl border-white/[.12] bg-white/[.045]"><WandSparkles size={16} className="text-[#bcb8ff]" /> Design with AI</Button>
+            <Button size="lg" onClick={onCreateJob} className="h-12 rounded-xl"><Plus size={16} /> Start mission</Button>
+          </div>
         </div>
       </section>
 
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {metricStyle.map(({ key, label, suffix, icon: Icon, accent }) => (
+      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Protocol metrics">
+        {metricStyle.map(({ key, label, suffix, icon: Icon, accent, hint }) => (
           <Card key={key} className={`metric-card metric-card-${accent} group overflow-hidden`}>
-            <CardContent className="relative p-4">
-              <div className="metric-card-line absolute inset-x-0 top-0 h-px opacity-70 transition group-hover:opacity-100" />
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-xs text-slate-500">{label}</p>
-                  <p className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-slate-100">
-                    {stats[key]}
-                    <span className="ml-1 text-xs font-normal text-slate-600">{suffix}</span>
-                  </p>
-                </div>
-                <span className="metric-card-icon grid size-9 place-items-center rounded-xl border">
-                  <Icon size={15} />
-                </span>
-              </div>
-              <p className="mt-3 text-[11px] text-slate-600">
-                {dataMode === "live" ? "Verified contract state" : "Current workspace state"}
-              </p>
+            <CardContent className="relative p-5">
+              <div className="metric-card-line absolute inset-x-0 top-0 h-px opacity-80" />
+              <div className="flex items-start justify-between"><div><p className="text-[11px] font-medium text-[#9ba6bd]">{label}</p><p className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-[#f3f6ff]">{stats[key]}<span className="ml-1 text-xs font-medium text-[#8d98ae]">{suffix}</span></p></div><span className="metric-card-icon grid size-10 place-items-center rounded-xl border"><Icon size={16} /></span></div>
+              <p className="mt-4 text-[10px] font-medium text-[#7f8ba1]">{dataMode === "live" ? hint : "Current workspace state"}</p>
             </CardContent>
           </Card>
         ))}
       </section>
 
-      <section className="mt-3 grid gap-3 xl:grid-cols-[1.6fr_.8fr]">
-        <Card>
-          <CardHeader className="flex-row items-center justify-between">
-            <div>
-              <CardTitle className="text-sm">Protocol lifecycle</CardTitle>
-              <p className="mt-1 text-xs text-slate-600">
-                Current aggregate state from the AgentRail contract
-              </p>
-            </div>
-            <Badge variant={dataMode === "live" ? "default" : "secondary"}>
-              {dataMode === "live" ? "Live" : dataMode}
-            </Badge>
-          </CardHeader>
-          <CardContent className="grid min-h-[218px] gap-3 p-4 sm:grid-cols-3">
-            {lifecycle.map(({ label, value, icon: Icon }, index) => (
-              <div
-                key={label}
-                className={`lifecycle-node lifecycle-node-${index + 1} relative flex min-h-36 flex-col justify-between overflow-hidden rounded-xl border border-white/[.07] bg-white/[.02] p-4`}
-              >
-                <span className="lifecycle-icon grid size-8 place-items-center rounded-lg">
-                  <Icon size={15} />
-                </span>
-                <div>
-                  <strong className="block text-2xl font-semibold tracking-tight text-slate-100">
-                    {value}
-                  </strong>
-                  <span className="mt-1 block text-[11px] text-slate-600">{label}</span>
-                </div>
-                {index < lifecycle.length - 1 && (
-                  <span className="absolute right-2 top-1/2 hidden text-slate-800 sm:block">
-                    →
-                  </span>
-                )}
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-
-        <Card className="overflow-hidden">
-          <CardContent className="relative flex h-full min-h-[280px] flex-col p-5">
-            <div className="absolute -right-14 -top-20 size-44 rounded-full bg-emerald-400/[.08] blur-3xl" />
-            <div className="relative flex items-center justify-between">
-              <span className="grid size-9 place-items-center rounded-lg bg-emerald-400/10 text-emerald-300">
-                <ShieldCheck size={18} />
-              </span>
-              <Badge variant={dataMode === "live" ? "default" : "secondary"}>
-                {dataMode === "live" ? "Operational" : "Checking"}
-              </Badge>
-            </div>
-            <div className="relative mt-auto">
-              <p className="text-xs font-medium uppercase tracking-[.16em] text-slate-600">
-                Network assurance
-              </p>
-              <p className="mt-2 text-xl font-semibold text-slate-100">
-                {dataMode === "live" ? "Contract state verified" : "Connecting to Testnet"}
-              </p>
-              <p className="mt-2 text-xs leading-5 text-slate-500">
-                Contract reachable, signing network verified, and confirmation polling active.
-              </p>
-              {dataMode === "error" && (
-                <Button className="mt-4" size="sm" variant="outline" onClick={onRefresh}>
-                  <RefreshCw size={13} />
-                  Retry contract read
-                </Button>
-              )}
-              <div className="mt-5 grid grid-cols-3 gap-2">
-                {[
-                  ["RPC", dataMode === "live" ? "Connected" : "Checking"],
-                  ["Ledger", latestLedger?.toLocaleString() ?? "—"],
-                  ["Network", "Testnet"],
-                ].map(([label, value]) => (
-                  <div key={label} className="rounded-lg border border-white/[.06] bg-white/[.025] p-2">
-                    <span className="block text-[9px] uppercase tracking-wider text-slate-600">{label}</span>
-                    <strong className="mt-1 block text-[11px] text-slate-300">{value}</strong>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      <section className="grid gap-4 xl:grid-cols-[1.25fr_.75fr]">
+        <ActionQueue jobs={jobs} agents={agents} onOpenJobs={onOpenJobs} />
+        <div className="grid gap-4">
+          <Card className="overflow-hidden border-[#69e8b6]/[.12]">
+            <CardContent className="relative p-5">
+              <div className="absolute -right-16 -top-20 size-48 rounded-full bg-[#69e8b6]/[.08] blur-3xl" />
+              <div className="relative flex items-center justify-between"><span className="grid size-10 place-items-center rounded-xl border border-[#69e8b6]/15 bg-[#69e8b6]/[.08] text-[#69e8b6]"><ShieldCheck size={18} /></span><Badge variant={dataMode === "live" ? "default" : "secondary"}>{dataMode === "live" ? "Operational" : "Checking"}</Badge></div>
+              <div className="relative mt-6"><p className="text-[10px] font-bold uppercase tracking-[.15em] text-[#7f8ba1]">Network assurance</p><h3 className="mt-2 text-lg font-semibold text-white">{dataMode === "live" ? "Contract state verified" : "Connecting to Testnet"}</h3><p className="mt-2 text-xs leading-5 text-[#9ba6bd]">RPC state, wallet network and ledger confirmation are checked before every settlement.</p></div>
+              <div className="relative mt-5 grid grid-cols-3 gap-2">{[["RPC", dataMode === "live" ? "Connected" : "Checking"], ["Ledger", latestLedger?.toLocaleString() ?? "—"], ["Finality", "≈ 5 sec"]].map(([label, value]) => <div key={label} className="rounded-lg border border-white/[.07] bg-white/[.03] p-2.5"><span className="block text-[8px] font-bold uppercase tracking-wider text-[#778298]">{label}</span><strong className="mt-1.5 block truncate text-[10px] text-[#d5dceb]">{value}</strong></div>)}</div>
+              {dataMode === "error" && <Button className="relative mt-4" size="sm" variant="outline" onClick={onRefresh}><RefreshCw size={13} /> Retry contract read</Button>}
+            </CardContent>
+          </Card>
+          <button onClick={onRegisterAgent} className="group flex items-center gap-3 rounded-2xl border border-dashed border-white/[.12] bg-white/[.018] p-4 text-left transition hover:border-[#756dff]/35 hover:bg-[#756dff]/[.04]"><span className="grid size-10 place-items-center rounded-xl bg-[#756dff]/10 text-[#bcb8ff]"><Bot size={17} /></span><span className="min-w-0 flex-1"><strong className="block text-sm text-[#e6ebf7]">Build agents?</strong><span className="mt-1 block text-xs text-[#929db4]">Publish an owned service profile on Stellar.</span></span><ArrowRight size={14} className="text-[#69748a] transition group-hover:translate-x-1" /></button>
+        </div>
       </section>
+
+      <PlaybookShelf onBrowse={onOpenLibrary} onUse={onUsePlaybook} />
+
+      <section className="grid gap-4 xl:grid-cols-[1.1fr_.9fr]">
+        <AgentWatchlist agents={agents} onBrowse={onOpenAgents} onHire={onHireAgent} />
+        <div className="overflow-hidden rounded-2xl border border-white/[.09] bg-[#0b0d1c]/90 p-5"><div className="flex items-center gap-2"><Sparkles size={15} className="text-[#8fdcff]" /><h3 className="text-sm font-semibold text-white">Why crypto rails matter</h3></div><p className="mt-2 text-xs leading-5 text-[#9ba6bd]">AgentRail turns an opaque freelance promise into an inspectable state machine.</p><div className="mt-5 grid gap-2">{[["01", "Private scope", "Only the SHA-256 commitment reaches the ledger."], ["02", "Programmable escrow", "Value follows contract authorization, not platform custody."], ["03", "Portable proof", "Settlement history stays with the agent identity."]].map(([number, title, copy]) => <div key={number} className="flex gap-3 rounded-xl border border-white/[.065] bg-white/[.025] p-3"><span className="font-mono text-[10px] font-bold text-[#8fdcff]">{number}</span><div><strong className="block text-xs text-[#e6ebf7]">{title}</strong><p className="mt-1 text-[10px] leading-4 text-[#929db4]">{copy}</p></div></div>)}</div><Button variant="ghost" className="mt-3 w-full justify-between" onClick={onOpenJobs}>Explore settlement flow <ArrowRight size={13} /></Button></div>
+      </section>
+
       <ProtocolPulse mode={dataMode} ledger={latestLedger} />
-      <MissionFunnel jobs={jobs} />
-    </>
+    </div>
   );
 }

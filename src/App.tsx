@@ -13,7 +13,6 @@ import {
   missionPlanToBrief,
   type MissionPlan,
 } from "@/components/mission-copilot";
-import { ProductStory } from "@/components/product-story";
 import {
   ApproveJobDialog,
   CreateJobDialog,
@@ -690,14 +689,20 @@ function App() {
                   dataMode={dataMode}
                   latestLedger={latestLedger}
                   jobs={jobs}
+                  agents={agents}
                   onRegisterAgent={() => {
                     resetTransaction();
                     setRegisterOpen(true);
                   }}
                   onCreateJob={openCreateJob}
                   onRefresh={() => void refreshProtocol()}
+                  onOpenJobs={() => navigate("jobs")}
+                  onOpenAgents={() => navigate("discover")}
+                  onOpenLibrary={() => navigate("playbooks")}
+                  onOpenCopilot={() => navigate("copilot")}
+                  onUsePlaybook={usePlaybook}
+                  onHireAgent={(agent) => selectAgent(agent, true)}
                 />
-                <ProductStory />
               </>
             )}
 
