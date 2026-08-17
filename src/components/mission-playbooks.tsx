@@ -18,7 +18,7 @@ export function MissionPlaybooks({ onUse }: { onUse: (playbook: MissionPlaybook)
   const toggleSaved = (id: string) => setSaved((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]);
 
   return (
-    <div className="grid gap-4">
+    <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-4">
       <section className="relative overflow-hidden rounded-2xl border border-white/[.075] bg-[#090a18] p-6 sm:p-8">
         <div className="absolute -right-20 -top-20 size-64 rounded-full bg-[#746cff]/10 blur-3xl" />
         <div className="relative">
