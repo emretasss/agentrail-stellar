@@ -25,6 +25,7 @@ import {
 } from "@/config/workspace-navigation";
 import { CommandPalette } from "@/components/command-palette";
 import { NetworkGuard } from "@/components/network-guard";
+import { useWorkspaceShortcuts } from "@/hooks/use-workspace-shortcuts";
 
 export type { AppView } from "@/config/workspace-navigation";
 
@@ -75,6 +76,8 @@ export function AppShell({
     onNavigate(view);
     setMobileOpen(false);
   }
+
+  useWorkspaceShortcuts(navigate);
 
   return (
     <div className="workspace-shell min-h-screen bg-background text-foreground">
