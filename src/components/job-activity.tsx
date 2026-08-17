@@ -8,6 +8,7 @@ import {
   RotateCcw,
   TriangleAlert,
 } from "lucide-react";
+import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -46,6 +47,9 @@ export function JobActivity({
   onRefund: (job: Job) => void;
   onDispute: (job: Job) => void;
 }) {
+  const [status, setStatus] = useState<JobStatus | "All">("All");
+  const visibleJobs = useMemo(() => status === "All" ? jobs : jobs.filter((job) => job.status === status), [jobs, status]);
+  const statusFilters: Array<JobStatus | "All"> = ["All", "Funded", "Delivered", "Released", "Refunded", "Disputed"];
   return (
     <section className="grid gap-3 xl:grid-cols-[1.4fr_.75fr]">
       <Card>
@@ -54,8 +58,14 @@ export function JobActivity({
             <CardTitle className="text-sm">Active jobs</CardTitle>
             <p className="mt-1 text-xs text-slate-600">Escrow lifecycle and delivery queue</p>
           </div>
-          <Badge variant="secondary">{jobs.length} total</Badge>
+          <Badge variant="secondary">{visibleJobs.length} shown</Badge>
         </CardHeader>
+        <div className="flex gap-2 overflow-x-auto border-t border-white/[.055] px-5 py-3">
+          {statusFilters.map((item) => {
+            const count = item === "All" ? jobs.length : jobs.filter((job) => job.status === item).length;
+            return <button key={item} onClick={() => setStatus(item)} className={cn("shrink-0 rounded-full border px-2.5 py-1 text-[9px] font-semibold transition", status === item ? "border-[#746cff]/30 bg-[#746cff]/10 text-[#b9b5ff]" : "border-white/[.06] text-slate-600 hover:text-slate-300")}>{item} <span className="ml-1 opacity-60">{count}</span></button>;
+          })}
+        </div>
         <CardContent className="overflow-x-auto px-0 pb-1">
           <table className="w-full min-w-[680px] text-left">
             <thead>
@@ -68,7 +78,7 @@ export function JobActivity({
               </tr>
             </thead>
             <tbody>
-              {jobs.map((job) => {
+              {visibleJobs.map((job) => {
                 const agent = agents.find((entry) => entry.id === job.agentId);
                 const canDeliver =
                   job.status === "Funded" &&
@@ -176,6 +186,7 @@ export function JobActivity({
               })}
             </tbody>
           </table>
+          {!visibleJobs.length && <div className="grid min-h-40 place-items-center border-t border-white/[.05] text-center"><div><CircleDot className="mx-auto text-slate-700" size={20} /><p className="mt-3 text-xs text-slate-500">No {status.toLowerCase()} missions yet.</p><button onClick={() => setStatus("All")} className="mt-1 text-[10px] text-[#78e8ff]">Show all missions</button></div></div>}
         </CardContent>
       </Card>
 
