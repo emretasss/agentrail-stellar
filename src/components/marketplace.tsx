@@ -28,6 +28,13 @@ function agentInitials(name: string) {
     .join("");
 }
 
+function agentFit(agent: Agent) {
+  const rating = (agent.rating / 5) * 50;
+  const reliability = agent.successRate * 0.4;
+  const verification = agent.verified ? 10 : 0;
+  return Math.min(100, Math.round(rating + reliability + verification));
+}
+
 const avatarGradients = [
   "from-cyan-400/25 to-blue-500/10 text-cyan-200",
   "from-emerald-400/25 to-teal-500/10 text-emerald-200",
@@ -160,6 +167,12 @@ export function Marketplace({
                     {decimalFromStroops(agent.priceStroops)}
                   </strong>
                 </div>
+              </div>
+
+              <div className="mt-3 flex items-center gap-2">
+                <span className="rounded-full border border-[#61f6c2]/10 bg-[#61f6c2]/[.045] px-2 py-1 text-[9px] font-semibold text-[#79f7cb]">{agentFit(agent)} trust fit</span>
+                <span className="rounded-full border border-white/[.06] px-2 py-1 text-[9px] text-slate-600">{agent.responseTime} response</span>
+                <span className="ml-auto flex items-center gap-1 text-[9px] text-slate-600"><span className={cn("size-1.5 rounded-full", agent.active ? "bg-[#61f6c2]" : "bg-slate-600")} />{agent.active ? "Available" : "Paused"}</span>
               </div>
 
               <div className="mt-4 flex items-center justify-between">
