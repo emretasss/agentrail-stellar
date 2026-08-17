@@ -2,6 +2,7 @@ import {
   Check,
   CheckCircle2,
   CircleDot,
+  Copy,
   ExternalLink,
   Download,
   FileCheck2,
@@ -10,6 +11,7 @@ import {
   Search,
   TriangleAlert,
 } from "lucide-react";
+import { toast } from "sonner";
 import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -214,6 +216,11 @@ export function JobActivity({
                           >
                             Explorer <ExternalLink size={12} />
                           </a>
+                        </Button>
+                      )}
+                      {job.txHash && (
+                        <Button size="sm" variant="ghost" aria-label={`Copy transaction hash for job ${job.id}`} onClick={() => { void navigator.clipboard.writeText(job.txHash!); toast.success("Transaction hash copied"); }}>
+                          <Copy size={12} />
                         </Button>
                       )}
                       </div>
