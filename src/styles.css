@@ -68,6 +68,31 @@ button {
   cursor: pointer;
 }
 
+:focus-visible {
+  outline: 2px solid rgba(120, 232, 255, 0.85);
+  outline-offset: 3px;
+}
+
+.skip-link {
+  position: fixed;
+  z-index: 100;
+  top: 0.75rem;
+  left: 0.75rem;
+  padding: 0.65rem 0.9rem;
+  border: 1px solid rgba(120, 232, 255, 0.35);
+  border-radius: 0.75rem;
+  background: #0b0c1b;
+  color: #dffaff;
+  font-size: 0.75rem;
+  font-weight: 600;
+  transform: translateY(-180%);
+  transition: transform 160ms ease;
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+}
+
 .ambient-grid {
   position: fixed;
   inset: 0;

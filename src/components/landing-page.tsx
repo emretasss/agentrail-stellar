@@ -86,6 +86,7 @@ export function LandingPage({
 
   return (
     <div className="landing-page relative isolate min-h-screen overflow-hidden bg-[#050510] text-white">
+      <a href="#landing-content" className="skip-link">Skip to main content</a>
       <div className="landing-noise" />
       <div className="landing-mesh" />
       <div className="landing-beam landing-beam-one" />
@@ -118,7 +119,7 @@ export function LandingPage({
         </Button>
       </header>
 
-      <main className="relative z-10">
+      <main id="landing-content" tabIndex={-1} className="relative z-10 outline-none">
         <section className="mx-auto grid min-h-[calc(100vh-88px)] w-full max-w-[1440px] items-center gap-16 px-5 pb-24 pt-16 sm:px-8 lg:grid-cols-[1.02fr_.98fr] lg:px-12 lg:pb-28 lg:pt-20">
           <motion.div initial="hidden" animate="visible" transition={{ staggerChildren: reduceMotion ? 0 : 0.09 }}>
             <motion.div variants={reveal} transition={{ duration: 0.55 }}>

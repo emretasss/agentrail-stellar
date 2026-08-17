@@ -81,6 +81,7 @@ export function AppShell({
 
   return (
     <div className="workspace-shell min-h-screen bg-background text-foreground">
+      <a href="#workspace-content" className="skip-link">Skip to workspace content</a>
       <div className="ambient-grid" />
       <div className="ambient-aurora" />
       <div className="ledger-stars" />
@@ -258,7 +259,7 @@ export function AppShell({
 
         <NetworkGuard wallet={wallet} />
 
-        <main className="mx-auto w-full max-w-[1660px] p-4 sm:p-6 lg:p-7">{children}</main>
+        <main id="workspace-content" tabIndex={-1} className="mx-auto w-full max-w-[1660px] p-4 outline-none sm:p-6 lg:p-7">{children}</main>
       </div>
 
       <nav className="workspace-mobile-nav fixed inset-x-3 bottom-3 z-30 flex gap-1 overflow-x-auto rounded-2xl border border-white/[.09] p-1.5 shadow-2xl backdrop-blur-2xl lg:hidden" aria-label="Mobile workspace navigation">
