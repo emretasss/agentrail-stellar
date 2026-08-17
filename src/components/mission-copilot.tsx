@@ -164,7 +164,7 @@ export function MissionCopilot({
           </div>
           <Button size="lg" onClick={generate} disabled={loading}>
             {loading ? (
-              <LoadingState label="Designing mission" variant="Dots" className="text-slate-950 [&_span]:text-slate-950" />
+              <LoadingState label="Designing mission" variant="Dots" className="text-white [&_span]:text-white" />
             ) : (
               <><Sparkles size={16} />Generate mission plan</>
             )}
