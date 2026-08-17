@@ -18,8 +18,9 @@ import { ActionQueue } from "@/components/dashboard/action-queue";
 import { PlaybookShelf } from "@/components/dashboard/playbook-shelf";
 import { AgentWatchlist } from "@/components/dashboard/agent-watchlist";
 import { ProtocolPulse } from "@/components/protocol-pulse";
+import { RecentActivity } from "@/components/dashboard/recent-activity";
 import type { MissionPlaybook } from "@/data/mission-playbooks";
-import type { Agent, Job } from "@/types/agentrail";
+import type { ActivityEvent, Agent, Job } from "@/types/agentrail";
 
 type Stats = { agents: number; jobs: number; locked: string; released: string };
 
@@ -36,6 +37,7 @@ export function DashboardOverview({
   latestLedger,
   jobs,
   agents,
+  events,
   onCreateJob,
   onRegisterAgent,
   onRefresh,
@@ -51,6 +53,7 @@ export function DashboardOverview({
   latestLedger: number | null;
   jobs: Job[];
   agents: Agent[];
+  events: ActivityEvent[];
   onCreateJob: () => void;
   onRegisterAgent: () => void;
   onRefresh: () => void;
@@ -115,7 +118,7 @@ export function DashboardOverview({
 
       <section className="grid gap-4 xl:grid-cols-[1.1fr_.9fr]">
         <AgentWatchlist agents={agents} onBrowse={onOpenAgents} onHire={onHireAgent} />
-        <div className="overflow-hidden rounded-2xl border border-white/[.09] bg-[#0b0d1c]/90 p-5"><div className="flex items-center gap-2"><Sparkles size={15} className="text-[#8fdcff]" /><h3 className="text-sm font-semibold text-white">Why crypto rails matter</h3></div><p className="mt-2 text-xs leading-5 text-[#9ba6bd]">AgentRail turns an opaque freelance promise into an inspectable state machine.</p><div className="mt-5 grid gap-2">{[["01", "Private scope", "Only the SHA-256 commitment reaches the ledger."], ["02", "Programmable escrow", "Value follows contract authorization, not platform custody."], ["03", "Portable proof", "Settlement history stays with the agent identity."]].map(([number, title, copy]) => <div key={number} className="flex gap-3 rounded-xl border border-white/[.065] bg-white/[.025] p-3"><span className="font-mono text-[10px] font-bold text-[#8fdcff]">{number}</span><div><strong className="block text-xs text-[#e6ebf7]">{title}</strong><p className="mt-1 text-[10px] leading-4 text-[#929db4]">{copy}</p></div></div>)}</div><Button variant="ghost" className="mt-3 w-full justify-between" onClick={onOpenJobs}>Explore settlement flow <ArrowRight size={13} /></Button></div>
+        <RecentActivity events={events} onOpen={onOpenJobs} />
       </section>
 
       <ProtocolPulse mode={dataMode} ledger={latestLedger} />

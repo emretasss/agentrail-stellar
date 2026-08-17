@@ -690,6 +690,7 @@ function App() {
                   latestLedger={latestLedger}
                   jobs={jobs}
                   agents={agents}
+                  events={activity}
                   onRegisterAgent={() => {
                     resetTransaction();
                     setRegisterOpen(true);
