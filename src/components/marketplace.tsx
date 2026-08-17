@@ -7,6 +7,7 @@ import {
   Search,
   SlidersHorizontal,
   Heart,
+  Scale,
   Star,
   Zap,
   X,
@@ -21,6 +22,7 @@ import { decimalFromStroops } from "@/lib/stellar";
 import { cn } from "@/lib/utils";
 import type { Agent } from "@/types/agentrail";
 import { useLocalStorage } from "@/hooks/use-local-storage";
+import { AgentCompareTray } from "@/components/agent-compare-tray";
 
 function agentInitials(name: string) {
   return name
@@ -60,6 +62,7 @@ export function Marketplace({
   const [sort, setSort] = useState<"trust" | "price" | "experience">("trust");
   const [favorites, setFavorites] = useLocalStorage<number[]>("agentrail.favorite-agents", []);
   const [watchlistOnly, setWatchlistOnly] = useState(false);
+  const [compareIds, setCompareIds] = useState<number[]>([]);
   const categories = useMemo(() => ["All", ...new Set(agents.map((agent) => agent.category))], [agents]);
   const filtered = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -96,6 +99,7 @@ export function Marketplace({
         </div>
       </CardHeader>
       <CardContent>
+        <AgentCompareTray agents={compareIds.map((id) => agents.find((agent) => agent.id === id)).filter((agent): agent is Agent => Boolean(agent))} onRemove={(id) => setCompareIds((current) => current.filter((item) => item !== id))} onClear={() => setCompareIds([])} onChoose={(agent) => { onSelect(agent); onHire(agent); }} />
         <div className="mb-4 flex flex-col gap-3 border-b border-white/[.055] pb-4">
           <div className="flex items-center gap-2 overflow-x-auto pb-1">
             <SlidersHorizontal size={13} className="mr-1 shrink-0 text-slate-600" />
@@ -148,6 +152,7 @@ export function Marketplace({
                 </div>
                 <Badge variant="secondary">{agent.category}</Badge>
                 <button aria-label={`${favorites.includes(agent.id) ? "Remove" : "Add"} ${agent.name} ${favorites.includes(agent.id) ? "from" : "to"} watchlist`} onClick={(event) => { event.stopPropagation(); setFavorites((current) => current.includes(agent.id) ? current.filter((id) => id !== agent.id) : [...current, agent.id]); }} className={cn("grid size-7 shrink-0 place-items-center rounded-lg border transition", favorites.includes(agent.id) ? "border-[#ff8fbd]/20 bg-[#ff8fbd]/10 text-[#ffb1d0]" : "border-white/[.06] text-slate-600 hover:text-white")}><Heart size={12} className={cn(favorites.includes(agent.id) && "fill-current")} /></button>
+                <button aria-label={`${compareIds.includes(agent.id) ? "Remove" : "Add"} ${agent.name} ${compareIds.includes(agent.id) ? "from" : "to"} comparison`} onClick={(event) => { event.stopPropagation(); setCompareIds((current) => current.includes(agent.id) ? current.filter((id) => id !== agent.id) : current.length < 2 ? [...current, agent.id] : [current[1], agent.id]); }} className={cn("grid size-7 shrink-0 place-items-center rounded-lg border transition", compareIds.includes(agent.id) ? "border-[#756dff]/25 bg-[#756dff]/12 text-[#bcb8ff]" : "border-white/[.06] text-slate-600 hover:text-white")}><Scale size={12} /></button>
               </div>
 
               <div className="mt-4 grid grid-cols-3 divide-x divide-white/[.07] rounded-lg border border-white/[.06] bg-slate-950/40 py-2.5">
