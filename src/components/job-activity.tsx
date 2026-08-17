@@ -54,6 +54,7 @@ export function JobActivity({
   onDispute: (job: Job) => void;
 }) {
   const [status, setStatus] = useState<JobStatus | "All">("All");
+  const [activityTone, setActivityTone] = useState<NonNullable<ActivityEvent["tone"]> | "All">("All");
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<"attention" | "newest" | "value">("attention");
   const visibleJobs = useMemo(() => {
@@ -69,6 +70,7 @@ export function JobActivity({
     });
   }, [agents, jobs, query, sort, status]);
   const statusFilters: Array<JobStatus | "All"> = ["All", "Funded", "Delivered", "Released", "Refunded", "Disputed"];
+  const visibleEvents = events.filter((event) => activityTone === "All" || (event.tone ?? "neutral") === activityTone);
   return (
     <><JobHealthSummary jobs={jobs} /><section className="grid gap-3 xl:grid-cols-[1.4fr_.75fr]">
       <Card>
@@ -231,10 +233,13 @@ export function JobActivity({
           <p className="text-xs text-slate-600">Local product and on-chain events</p></div>
           <Button size="sm" variant="ghost" aria-label="Export activity as CSV" onClick={() => downloadTextFile("agentrail-activity.csv", activityToCsv(events), "text/csv;charset=utf-8")}><Download size={12} /> CSV</Button>
         </CardHeader>
+        <div className="flex gap-1 overflow-x-auto border-y border-white/[.055] px-4 py-2">
+          {(["All", "success", "warning", "error", "neutral"] as const).map((tone) => <button key={tone} onClick={() => setActivityTone(tone)} className={cn("shrink-0 rounded-full border px-2.5 py-1 text-[9px] capitalize transition", activityTone === tone ? "border-[#746cff]/30 bg-[#746cff]/10 text-[#c1bdff]" : "border-white/[.06] text-[#929db4]")}>{tone}</button>)}
+        </div>
         <CardContent className="grid gap-1">
-          {events.slice(0, 5).map((event, index) => (
+          {visibleEvents.slice(0, 5).map((event, index) => (
             <div key={event.id} className="relative flex gap-3 py-2.5">
-              {index < Math.min(events.length, 5) - 1 && (
+              {index < Math.min(visibleEvents.length, 5) - 1 && (
                 <span className="absolute left-[7px] top-8 h-[calc(100%-14px)] w-px bg-white/[.07]" />
               )}
               <span
@@ -258,8 +263,9 @@ export function JobActivity({
               </div>
             </div>
           ))}
+          {!visibleEvents.length && <div className="grid min-h-28 place-items-center text-center text-xs text-[#929db4]">No events in this signal group.</div>}
           <p className="mt-1 text-[10px] text-slate-700">
-            Showing {Math.min(events.length, 5)} of {events.length} recorded events
+            Showing {Math.min(visibleEvents.length, 5)} of {visibleEvents.length} matching events
           </p>
         </CardContent>
       </Card>
