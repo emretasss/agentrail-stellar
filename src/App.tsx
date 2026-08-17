@@ -27,6 +27,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ValidationHub } from "@/components/validation-hub";
+import { NetworkExplorer } from "@/components/network-explorer";
 import {
   initialActivity,
   initialRegisterForm,
@@ -755,6 +756,15 @@ function App() {
             )}
 
             {activeView === "copilot" && <MissionCopilot onUsePlan={useMissionPlan} />}
+
+            {activeView === "network" && (
+              <NetworkExplorer
+                mode={dataMode}
+                ledger={latestLedger}
+                jobs={jobs}
+                onRefresh={() => void refreshProtocol()}
+              />
+            )}
 
             {activeView === "growth" && (
               <GrowthLab

@@ -2,6 +2,7 @@ import {
   Bot,
   BrainCircuit,
   BriefcaseBusiness,
+  Blocks,
   LayoutDashboard,
   ShieldCheck,
   TrendingUp,
@@ -15,7 +16,8 @@ export type AppView =
   | "jobs"
   | "copilot"
   | "growth"
-  | "validation";
+  | "validation"
+  | "network";
 
 export type WorkspaceNavItem = {
   id: AppView;
@@ -60,6 +62,14 @@ export const workspaceNavigation: WorkspaceNavItem[] = [
     description: "Design a measurable agent mission with AI",
     group: "workspace",
     badge: "AI",
+  },
+  {
+    id: "network",
+    label: "Network explorer",
+    shortLabel: "Network",
+    icon: Blocks,
+    description: "Inspect contract state and Stellar settlement health",
+    group: "launch",
   },
   {
     id: "growth",
