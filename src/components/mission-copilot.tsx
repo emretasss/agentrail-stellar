@@ -18,6 +18,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import LoadingState from "@/components/ui/loading-state";
 import { missionPlaybooks } from "@/data/mission-playbooks";
+import { assessMissionReadiness } from "@/lib/mission-readiness";
 
 export type MissionPlan = {
   title: string;
@@ -77,6 +78,7 @@ export function MissionCopilot({
   const [loading, setLoading] = useState(false);
   const [source, setSource] = useState<"gemini" | "template" | null>(null);
   const charCount = useMemo(() => goal.trim().length, [goal]);
+  const readiness = useMemo(() => assessMissionReadiness(goal), [goal]);
 
   async function generate() {
     if (charCount < 20) {
@@ -151,6 +153,11 @@ export function MissionCopilot({
             <span className="absolute bottom-3 right-3 text-[10px] text-slate-700">
               {charCount}/2000
             </span>
+          </div>
+          <div className="rounded-xl border border-white/[.06] bg-white/[.02] p-3.5">
+            <div className="flex items-center justify-between text-[10px]"><span className="font-semibold text-slate-500">Mission readiness</span><strong className={readiness.score >= 75 ? "text-[#61f6c2]" : "text-amber-300"}>{readiness.score}%</strong></div>
+            <div className="mt-2 h-1 overflow-hidden rounded-full bg-white/[.05]"><div className="h-full rounded-full bg-gradient-to-r from-[#746cff] to-[#61f6c2] transition-all duration-500" style={{ width: `${readiness.score}%` }} /></div>
+            <div className="mt-3 flex flex-wrap gap-2">{readiness.checks.map(({ label, passed }) => <span key={label} className={`rounded-full border px-2 py-1 text-[8px] ${passed ? "border-[#61f6c2]/10 bg-[#61f6c2]/[.04] text-[#79f7cb]" : "border-white/[.06] text-slate-700"}`}>{passed ? "✓" : "+"} {label}</span>)}</div>
           </div>
           <Button size="lg" onClick={generate} disabled={loading}>
             {loading ? (
