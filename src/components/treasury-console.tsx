@@ -4,13 +4,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { decimalFromStroops } from "@/lib/stellar";
 import type { Job } from "@/types/agentrail";
 import { SettlementHealth } from "@/components/settlement-health";
+import { useState } from "react";
+import type { JobStatus } from "@/types/agentrail";
 
 export function TreasuryConsole({ jobs }: { jobs: Job[] }) {
+  const [ledgerStatus, setLedgerStatus] = useState<JobStatus | "All">("All");
   const locked = jobs.filter((job) => job.status === "Funded" || job.status === "Delivered");
   const released = jobs.filter((job) => job.status === "Released");
   const refunded = jobs.filter((job) => job.status === "Refunded");
   const sum = (items: Job[]) => items.reduce((total, job) => total + job.amountStroops, 0n);
   const total = sum(jobs);
+  const ledgerJobs = jobs.filter((job) => ledgerStatus === "All" || job.status === ledgerStatus);
   const flows = [
     { label: "Protected in escrow", value: sum(locked), icon: LockKeyhole, tone: "text-[#aaa5ff]", direction: "in" },
     { label: "Released to agents", value: sum(released), icon: ArrowUpRight, tone: "text-[#61f6c2]", direction: "out" },
@@ -41,7 +45,7 @@ export function TreasuryConsole({ jobs }: { jobs: Job[] }) {
         </Card>
       </section>
 
-      <Card><CardHeader><CardTitle className="text-sm">Settlement ledger</CardTitle></CardHeader><CardContent className="overflow-x-auto px-0"><table className="w-full min-w-[620px] text-left text-xs"><thead><tr className="border-y border-white/[.06] text-[9px] uppercase tracking-[.13em] text-slate-700"><th className="px-5 py-3">Mission</th><th className="px-3 py-3">Route</th><th className="px-3 py-3">Value</th><th className="px-5 py-3 text-right">Integrity</th></tr></thead><tbody>{jobs.map((job) => <tr key={job.id} className="border-b border-white/[.045]"><td className="px-5 py-3.5 font-mono text-slate-400">AR-{String(job.id).padStart(4, "0")}</td><td className="px-3 py-3.5 text-slate-500">{job.status}</td><td className="px-3 py-3.5 text-slate-300">{decimalFromStroops(job.amountStroops)} XLM</td><td className="px-5 py-3.5 text-right"><span className="inline-flex items-center gap-1.5 text-[10px] text-[#61f6c2]"><CircleDollarSign size={11} /> Contract tracked</span></td></tr>)}</tbody></table></CardContent></Card>
+      <Card><CardHeader className="flex-row items-center justify-between"><div><CardTitle className="text-sm">Settlement ledger</CardTitle><p className="mt-1 text-xs text-[#929db4]">Inspect value by contract state</p></div><select aria-label="Filter settlement ledger" value={ledgerStatus} onChange={(event) => setLedgerStatus(event.target.value as typeof ledgerStatus)} className="h-8 rounded-lg border border-white/[.08] bg-[#090b18] px-2.5 text-[10px] text-[#a8b2c6] outline-none"><option value="All">All routes</option>{(["Funded", "Delivered", "Released", "Refunded", "Disputed"] as JobStatus[]).map((status) => <option key={status} value={status}>{status}</option>)}</select></CardHeader><CardContent className="overflow-x-auto px-0"><table className="w-full min-w-[620px] text-left text-xs"><thead><tr className="border-y border-white/[.06] text-[9px] uppercase tracking-[.13em] text-slate-700"><th className="px-5 py-3">Mission</th><th className="px-3 py-3">Route</th><th className="px-3 py-3">Value</th><th className="px-5 py-3 text-right">Integrity</th></tr></thead><tbody>{ledgerJobs.map((job) => <tr key={job.id} className="border-b border-white/[.045]"><td className="px-5 py-3.5 font-mono text-slate-400">AR-{String(job.id).padStart(4, "0")}</td><td className="px-3 py-3.5 text-slate-500">{job.status}</td><td className="px-3 py-3.5 text-slate-300">{decimalFromStroops(job.amountStroops)} XLM</td><td className="px-5 py-3.5 text-right"><span className="inline-flex items-center gap-1.5 text-[10px] text-[#61f6c2]"><CircleDollarSign size={11} /> Contract tracked</span></td></tr>)}</tbody></table>{!ledgerJobs.length && <div className="grid min-h-32 place-items-center border-t border-white/[.05] text-xs text-[#929db4]">No value has entered this route yet.</div>}</CardContent></Card>
     </div>
   );
 }
