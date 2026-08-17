@@ -15,6 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { decimalFromStroops } from "@/lib/stellar";
 import { cn } from "@/lib/utils";
 import type { ActivityEvent, Agent, Job, JobStatus } from "@/types/agentrail";
+import { DeadlineHealth } from "@/components/deadline-health";
 
 const statusVariant: Record<JobStatus, "default" | "secondary" | "warning" | "destructive"> = {
   Funded: "secondary",
@@ -74,7 +75,7 @@ export function JobActivity({
               const canDeliver = job.status === "Funded" && Boolean(walletAddress) && agent?.owner === walletAddress;
               const canApprove = job.status === "Delivered" && isPayer;
               const canRefund = job.status === "Funded" && isPayer && Boolean(latestLedger && job.deadlineLedger) && latestLedger! > job.deadlineLedger!;
-              return <article key={job.id} className="rounded-xl border border-white/[.06] bg-white/[.02] p-4"><div className="flex items-start justify-between gap-3"><div><strong className="font-mono text-xs text-slate-300">AR-{String(job.id).padStart(4, "0")}</strong><p className="mt-1 line-clamp-2 text-[10px] leading-4 text-slate-600">{job.brief}</p></div><Badge variant={statusVariant[job.status]}>{job.status}</Badge></div><div className="mt-4 grid grid-cols-2 gap-2"><div className="rounded-lg bg-black/20 p-2.5"><span className="block text-[8px] uppercase tracking-wider text-slate-700">Agent</span><strong className="mt-1 block truncate text-[10px] text-slate-400">@{agent?.handle ?? "unknown"}</strong></div><div className="rounded-lg bg-black/20 p-2.5"><span className="block text-[8px] uppercase tracking-wider text-slate-700">Escrow</span><strong className="mt-1 block text-[10px] text-slate-300">{decimalFromStroops(job.amountStroops)} XLM</strong></div></div>{(canDeliver || canApprove || canRefund) && <div className="mt-3 flex gap-2">{canDeliver && <Button size="sm" variant="outline" className="flex-1" onClick={() => onDeliver(job)}><FileCheck2 size={12} /> Deliver</Button>}{canApprove && <Button size="sm" className="flex-1" onClick={() => onApprove(job)}><Check size={12} /> Release</Button>}{canRefund && <Button size="sm" variant="outline" className="flex-1" onClick={() => onRefund(job)}><RotateCcw size={12} /> Refund</Button>}</div>}</article>;
+              return <article key={job.id} className="rounded-xl border border-white/[.06] bg-white/[.02] p-4"><div className="flex items-start justify-between gap-3"><div><strong className="font-mono text-xs text-slate-300">AR-{String(job.id).padStart(4, "0")}</strong><p className="mt-1 line-clamp-2 text-[10px] leading-4 text-slate-600">{job.brief}</p></div><Badge variant={statusVariant[job.status]}>{job.status}</Badge></div><div className="mt-4 grid grid-cols-2 gap-2"><div className="rounded-lg bg-black/20 p-2.5"><span className="block text-[8px] uppercase tracking-wider text-slate-700">Agent</span><strong className="mt-1 block truncate text-[10px] text-slate-400">@{agent?.handle ?? "unknown"}</strong></div><div className="rounded-lg bg-black/20 p-2.5"><span className="block text-[8px] uppercase tracking-wider text-slate-700">Escrow</span><strong className="mt-1 block text-[10px] text-slate-300">{decimalFromStroops(job.amountStroops)} XLM</strong></div></div><div className="mt-3"><DeadlineHealth deadline={job.deadlineLedger} current={latestLedger} /></div>{(canDeliver || canApprove || canRefund) && <div className="mt-3 flex gap-2">{canDeliver && <Button size="sm" variant="outline" className="flex-1" onClick={() => onDeliver(job)}><FileCheck2 size={12} /> Deliver</Button>}{canApprove && <Button size="sm" className="flex-1" onClick={() => onApprove(job)}><Check size={12} /> Release</Button>}{canRefund && <Button size="sm" variant="outline" className="flex-1" onClick={() => onRefund(job)}><RotateCcw size={12} /> Refund</Button>}</div>}</article>;
             })}
           </div>
           <table className="hidden w-full min-w-[680px] text-left md:table">
@@ -84,6 +85,7 @@ export function JobActivity({
                 <th className="px-3 py-3 font-medium">Agent</th>
                 <th className="px-3 py-3 font-medium">Amount</th>
                 <th className="px-3 py-3 font-medium">Status</th>
+                <th className="px-3 py-3 font-medium">Deadline</th>
                 <th className="px-5 py-3 text-right font-medium">Action</th>
               </tr>
             </thead>
@@ -118,6 +120,7 @@ export function JobActivity({
                     <td className="px-3 py-3.5">
                       <span className="text-slate-400">@{agent?.handle ?? "unknown"}</span>
                     </td>
+                    <td className="px-3 py-3.5"><DeadlineHealth deadline={job.deadlineLedger} current={latestLedger} /></td>
                     <td className="px-3 py-3.5 font-medium text-slate-300">
                       {decimalFromStroops(job.amountStroops)} XLM
                     </td>
