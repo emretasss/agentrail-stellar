@@ -238,7 +238,7 @@ export function AppShell({
         <main className="mx-auto w-full max-w-[1660px] p-4 sm:p-6 lg:p-7">{children}</main>
       </div>
 
-      <nav className="workspace-mobile-nav fixed inset-x-3 bottom-3 z-30 grid grid-cols-7 rounded-2xl border border-white/[.09] p-1.5 shadow-2xl backdrop-blur-2xl lg:hidden">
+      <nav className="workspace-mobile-nav fixed inset-x-3 bottom-3 z-30 grid grid-cols-8 rounded-2xl border border-white/[.09] p-1.5 shadow-2xl backdrop-blur-2xl lg:hidden">
         {workspaceMobileNavigation.map(({ id, shortLabel: label, icon: Icon }) => (
           <button
             key={id}

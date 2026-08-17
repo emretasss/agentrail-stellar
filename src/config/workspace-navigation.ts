@@ -3,6 +3,7 @@ import {
   BrainCircuit,
   BriefcaseBusiness,
   Blocks,
+  Fingerprint,
   LayoutDashboard,
   ShieldCheck,
   TrendingUp,
@@ -17,7 +18,8 @@ export type AppView =
   | "copilot"
   | "growth"
   | "validation"
-  | "network";
+  | "network"
+  | "reputation";
 
 export type WorkspaceNavItem = {
   id: AppView;
@@ -52,6 +54,14 @@ export const workspaceNavigation: WorkspaceNavItem[] = [
     shortLabel: "Jobs",
     icon: BriefcaseBusiness,
     description: "Manage funding, delivery and settlement",
+    group: "workspace",
+  },
+  {
+    id: "reputation",
+    label: "Reputation lab",
+    shortLabel: "Trust",
+    icon: Fingerprint,
+    description: "Explore portable, settlement-backed agent trust",
     group: "workspace",
   },
   {
