@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { decimalFromStroops } from "@/lib/stellar";
 import type { Job } from "@/types/agentrail";
+import { SettlementHealth } from "@/components/settlement-health";
 
 export function TreasuryConsole({ jobs }: { jobs: Job[] }) {
   const locked = jobs.filter((job) => job.status === "Funded" || job.status === "Delivered");
@@ -22,6 +23,8 @@ export function TreasuryConsole({ jobs }: { jobs: Job[] }) {
         <div className="absolute -right-12 -top-20 size-64 rounded-full bg-[#61f6c2]/[.07] blur-3xl" />
         <div className="relative"><div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[.17em] text-[#61f6c2]"><Coins size={13} /> Protocol treasury</div><h2 className="mt-3 text-3xl font-semibold tracking-[-.045em] text-white">Follow value, not vanity metrics.</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">A transparent view of XLM moving into protection, successful settlement and buyer recovery.</p></div>
       </section>
+
+      <SettlementHealth jobs={jobs} />
 
       <section className="grid gap-3 lg:grid-cols-[.8fr_1.2fr]">
         <Card className="overflow-hidden">
