@@ -7,6 +7,7 @@ import {
   FileCheck2,
   LockKeyhole,
   RotateCcw,
+  Search,
   TriangleAlert,
 } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -18,6 +19,7 @@ import { cn } from "@/lib/utils";
 import type { ActivityEvent, Agent, Job, JobStatus } from "@/types/agentrail";
 import { DeadlineHealth } from "@/components/deadline-health";
 import { activityToCsv, downloadTextFile } from "@/lib/export";
+import { Input } from "@/components/ui/input";
 
 const statusVariant: Record<JobStatus, "default" | "secondary" | "warning" | "destructive"> = {
   Funded: "secondary",
@@ -51,7 +53,14 @@ export function JobActivity({
   onDispute: (job: Job) => void;
 }) {
   const [status, setStatus] = useState<JobStatus | "All">("All");
-  const visibleJobs = useMemo(() => status === "All" ? jobs : jobs.filter((job) => job.status === status), [jobs, status]);
+  const [query, setQuery] = useState("");
+  const visibleJobs = useMemo(() => {
+    const term = query.trim().toLowerCase();
+    return jobs.filter((job) => status === "All" || job.status === status).filter((job) => {
+      const agent = agents.find((entry) => entry.id === job.agentId);
+      return !term || `${job.id} ${job.brief} ${agent?.name ?? ""} ${agent?.handle ?? ""}`.toLowerCase().includes(term);
+    });
+  }, [agents, jobs, query, status]);
   const statusFilters: Array<JobStatus | "All"> = ["All", "Funded", "Delivered", "Released", "Refunded", "Disputed"];
   return (
     <section className="grid gap-3 xl:grid-cols-[1.4fr_.75fr]">
@@ -63,11 +72,14 @@ export function JobActivity({
           </div>
           <Badge variant="secondary">{visibleJobs.length} shown</Badge>
         </CardHeader>
-        <div className="flex gap-2 overflow-x-auto border-t border-white/[.055] px-5 py-3">
+        <div className="flex flex-col gap-3 border-t border-white/[.055] px-5 py-3 sm:flex-row sm:items-center">
+          <div className="relative sm:w-60"><Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#7f8aa0]" /><Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search mission or agent" aria-label="Search missions" className="h-8 pl-8 text-[10px]" /></div>
+          <div className="flex gap-2 overflow-x-auto">
           {statusFilters.map((item) => {
             const count = item === "All" ? jobs.length : jobs.filter((job) => job.status === item).length;
             return <button key={item} onClick={() => setStatus(item)} className={cn("shrink-0 rounded-full border px-2.5 py-1 text-[9px] font-semibold transition", status === item ? "border-[#746cff]/30 bg-[#746cff]/10 text-[#b9b5ff]" : "border-white/[.06] text-slate-600 hover:text-slate-300")}>{item} <span className="ml-1 opacity-60">{count}</span></button>;
           })}
+          </div>
         </div>
         <CardContent className="overflow-x-auto px-0 pb-1">
           <div className="grid gap-2 px-3 pb-3 md:hidden">
