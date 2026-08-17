@@ -255,13 +255,14 @@ export function AppShell({
         <main className="mx-auto w-full max-w-[1660px] p-4 sm:p-6 lg:p-7">{children}</main>
       </div>
 
-      <nav className="workspace-mobile-nav fixed inset-x-3 bottom-3 z-30 grid grid-cols-10 rounded-2xl border border-white/[.09] p-1.5 shadow-2xl backdrop-blur-2xl lg:hidden">
+      <nav className="workspace-mobile-nav fixed inset-x-3 bottom-3 z-30 flex gap-1 overflow-x-auto rounded-2xl border border-white/[.09] p-1.5 shadow-2xl backdrop-blur-2xl lg:hidden" aria-label="Mobile workspace navigation">
         {workspaceMobileNavigation.map(({ id, shortLabel: label, icon: Icon }) => (
           <button
             key={id}
             onClick={() => navigate(id)}
+            aria-current={activeView === id ? "page" : undefined}
             className={cn(
-              "flex min-w-0 flex-col items-center gap-1 rounded-xl px-1 py-2 text-[8px] transition",
+              "flex min-w-[58px] shrink-0 flex-col items-center gap-1 rounded-xl px-2 py-2 text-[8px] transition",
               activeView === id ? "bg-[#746cff]/15 text-[#8fe9ff] shadow-[inset_0_0_0_1px_rgba(120,232,255,.1)]" : "text-slate-600",
             )}
           >

@@ -630,6 +630,19 @@ button {
   background: linear-gradient(#4d47a8, #25566b);
 }
 
+.workspace-mobile-nav {
+  scrollbar-width: none;
+  scroll-snap-type: x proximity;
+}
+
+.workspace-mobile-nav::-webkit-scrollbar {
+  display: none;
+}
+
+.workspace-mobile-nav > button {
+  scroll-snap-align: center;
+}
+
 .light body {
   background: #f8fafc;
 }
