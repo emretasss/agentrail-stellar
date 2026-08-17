@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ProtocolPulse } from "@/components/protocol-pulse";
 import type { Job } from "@/types/agentrail";
+import { stellarConfig } from "@/lib/stellar";
 
 const CONTRACT_ID = "CB6QV6VUJH4FRSLZRTOV2HBIIXSZ4V2YRTCE3S5U4KCLZE7QFW4YTLV5";
 
@@ -75,6 +76,13 @@ export function NetworkExplorer({
           </CardContent>
         </Card>
       </section>
+
+      <Card>
+        <CardHeader><CardTitle className="text-sm">Protocol endpoints</CardTitle><p className="text-xs text-slate-600">Runtime addresses used by the current deployment</p></CardHeader>
+        <CardContent className="grid gap-2 md:grid-cols-3">
+          {[["Soroban RPC", stellarConfig.rpcUrl], ["Native XLM SAC", stellarConfig.nativeTokenContractId], ["Read source", stellarConfig.readSource]].map(([label, value]) => <div key={label} className="rounded-xl border border-white/[.065] bg-white/[.025] p-4"><span className="block text-[9px] font-bold uppercase tracking-[.13em] text-[#7f8aa0]">{label}</span><code className="mt-2 block truncate text-[10px] text-[#b8c2d5]" title={value}>{value}</code></div>)}
+        </CardContent>
+      </Card>
     </div>
   );
 }
