@@ -771,7 +771,14 @@ function App() {
               />
             )}
 
-            {activeView === "copilot" && <MissionCopilot onUsePlan={useMissionPlan} />}
+            {activeView === "copilot" && (
+              <MissionCopilot
+                onUsePlan={useMissionPlan}
+                wallet={wallet}
+                connecting={busy === "wallet"}
+                onConnect={handleConnect}
+              />
+            )}
 
             {activeView === "network" && (
               <NetworkExplorer

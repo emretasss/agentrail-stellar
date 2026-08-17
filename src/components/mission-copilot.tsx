@@ -8,6 +8,7 @@ import {
   Copy,
   ShieldAlert,
   Sparkles,
+  Wallet,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useMemo, useState } from "react";
@@ -21,6 +22,7 @@ import { missionPlaybooks } from "@/data/mission-playbooks";
 import { assessMissionReadiness } from "@/lib/mission-readiness";
 import { MissionQuality } from "@/components/mission-quality";
 import { useLocalStorage } from "@/hooks/use-local-storage";
+import { checkFreighter, stellarConfig, type WalletState } from "@/lib/stellar";
 
 export type MissionPlan = {
   title: string;
@@ -72,8 +74,14 @@ export function missionPlanToBrief(plan: MissionPlan) {
 
 export function MissionCopilot({
   onUsePlan,
+  wallet,
+  connecting,
+  onConnect,
 }: {
   onUsePlan: (plan: MissionPlan) => void;
+  wallet: WalletState | null;
+  connecting: boolean;
+  onConnect: () => Promise<boolean>;
 }) {
   const [goal, setGoal] = useLocalStorage<string>("agentrail.copilot-draft", "");
   const [plan, setPlan] = useState<MissionPlan | null>(null);
@@ -81,8 +89,27 @@ export function MissionCopilot({
   const [source, setSource] = useState<"gemini" | "template" | null>(null);
   const charCount = useMemo(() => goal.trim().length, [goal]);
   const readiness = useMemo(() => assessMissionReadiness(goal), [goal]);
+  const walletVerified =
+    wallet?.networkPassphrase === stellarConfig.networkPassphrase;
 
   async function generate() {
+    if (!walletVerified || !wallet) {
+      toast.error("Connect a Stellar Testnet wallet first", {
+        description: "Mission generation is locked until your wallet and network are verified.",
+      });
+      return;
+    }
+    const activeWallet = await checkFreighter();
+    if (
+      !activeWallet ||
+      activeWallet.address !== wallet.address ||
+      activeWallet.networkPassphrase !== stellarConfig.networkPassphrase
+    ) {
+      toast.error("Wallet session changed", {
+        description: "Reconnect Freighter on Stellar Testnet before generating a mission.",
+      });
+      return;
+    }
     if (charCount < 20) {
       toast.error("Add more mission detail", {
         description: "Describe the goal, output, and intended use in at least 20 characters.",
@@ -162,9 +189,30 @@ export function MissionCopilot({
             <div className="mt-3 flex flex-wrap gap-2">{readiness.checks.map(({ label, passed }) => <span key={label} className={`rounded-full border px-2 py-1 text-[8px] ${passed ? "border-[#61f6c2]/10 bg-[#61f6c2]/[.04] text-[#79f7cb]" : "border-white/[.06] text-slate-700"}`}>{passed ? "✓" : "+"} {label}</span>)}</div>
             {readiness.nextSuggestion && <p className="mt-3 rounded-lg border border-[#ffbf69]/10 bg-[#ffbf69]/[.035] px-3 py-2 text-[10px] leading-4 text-[#d8c199]"><strong className="text-[#ffcf8c]">Next:</strong> {readiness.nextSuggestion}</p>}
           </div>
-          <Button size="lg" onClick={generate} disabled={loading}>
+          {!walletVerified && (
+            <div className="flex items-start gap-3 rounded-xl border border-violet-400/20 bg-violet-400/[.07] p-3.5">
+              <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-violet-400/10 text-violet-200">
+                <Wallet size={15} />
+              </span>
+              <div>
+                <strong className="block text-xs text-slate-100">Wallet verification required</strong>
+                <p className="mt-1 text-[10px] leading-4 text-slate-400">
+                  Connect Freighter on Stellar Testnet before AgentRail sends a mission to Copilot.
+                </p>
+              </div>
+            </div>
+          )}
+          <Button
+            size="lg"
+            onClick={() => walletVerified ? void generate() : void onConnect()}
+            disabled={loading || connecting}
+          >
             {loading ? (
               <LoadingState label="Designing mission" variant="Dots" className="text-white [&_span]:text-white" />
+            ) : connecting ? (
+              <LoadingState label="Connecting wallet" variant="Dots" className="text-white [&_span]:text-white" />
+            ) : !walletVerified ? (
+              <><Wallet size={16} />Connect wallet to generate</>
             ) : (
               <><Sparkles size={16} />Generate mission plan</>
             )}
