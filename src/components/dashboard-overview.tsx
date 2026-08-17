@@ -11,6 +11,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ProtocolPulse } from "@/components/protocol-pulse";
 
 type Stats = {
   agents: number;
@@ -206,6 +207,7 @@ export function DashboardOverview({
           </CardContent>
         </Card>
       </section>
+      <ProtocolPulse mode={dataMode} ledger={latestLedger} />
     </>
   );
 }
