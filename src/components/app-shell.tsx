@@ -24,6 +24,7 @@ import {
   type AppView,
 } from "@/config/workspace-navigation";
 import { CommandPalette } from "@/components/command-palette";
+import { NetworkGuard } from "@/components/network-guard";
 
 export type { AppView } from "@/config/workspace-navigation";
 
@@ -251,6 +252,8 @@ export function AppShell({
             </Button>
           </div>
         </header>
+
+        <NetworkGuard wallet={wallet} />
 
         <main className="mx-auto w-full max-w-[1660px] p-4 sm:p-6 lg:p-7">{children}</main>
       </div>
