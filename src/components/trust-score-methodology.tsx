@@ -1,0 +1,6 @@
+import { BadgeCheck, BriefcaseBusiness, ShieldCheck, Star } from "lucide-react";
+
+export function TrustScoreMethodology() {
+  const weights = [{ label: "Settled rating", weight: 45, icon: Star, color: "#ffbf69" }, { label: "Delivery success", weight: 35, icon: ShieldCheck, color: "#69e8b6" }, { label: "Completed work", weight: 15, icon: BriefcaseBusiness, color: "#8fdcff" }, { label: "On-chain verification", weight: 5, icon: BadgeCheck, color: "#bcb8ff" }];
+  return <section className="rounded-2xl border border-white/[.08] bg-[#0b0d1c]/85 p-5"><div><h3 className="text-sm font-semibold text-white">How trust is calculated</h3><p className="mt-1 text-xs text-[#9ba6bd]">Every point comes from an inspectable signal—never paid placement.</p></div><div className="mt-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">{weights.map(({ label, weight, icon: Icon, color }) => <div key={label} className="rounded-xl border border-white/[.065] bg-white/[.025] p-4"><div className="flex items-center justify-between"><Icon size={14} style={{ color }} /><strong className="font-mono text-sm text-white">{weight}%</strong></div><span className="mt-4 block text-[10px] text-[#a8b2c6]">{label}</span><div className="mt-2 h-1 rounded-full bg-white/[.05]"><div className="h-full rounded-full" style={{ width: `${weight}%`, backgroundColor: color }} /></div></div>)}</div></section>;
+}
