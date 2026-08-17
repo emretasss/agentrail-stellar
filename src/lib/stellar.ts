@@ -15,21 +15,63 @@ const DEPLOYED_TESTNET_CONTRACT =
 const DEPLOYED_TESTNET_READ_SOURCE =
   "GBRTZ4TDJDBMR3Y3S3IAFEQFFW2YGRR35XOPRMHGFRKFGY4PMOU45T3N";
 
+const INVALID_PUBLIC_ENV_VALUE = /^(?:\[?sensitive\]?|undefined|null|changeme)$/i;
+
+export function resolvePublicEnvValue(
+  value: string | undefined,
+  fallback: string,
+  isValid: (candidate: string) => boolean = () => true,
+): string {
+  const candidate = value?.trim() ?? "";
+  if (!candidate || INVALID_PUBLIC_ENV_VALUE.test(candidate) || !isValid(candidate)) {
+    return fallback;
+  }
+  return candidate;
+}
+
+function isHttpUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" || url.protocol === "http:";
+  } catch {
+    return false;
+  }
+}
+
 export const stellarConfig = {
-  contractId:
-    import.meta.env.VITE_AGENTRAIL_CONTRACT_ID ?? DEPLOYED_TESTNET_CONTRACT,
-  rpcUrl:
-    import.meta.env.VITE_STELLAR_RPC_URL ??
+  contractId: resolvePublicEnvValue(
+    import.meta.env.VITE_AGENTRAIL_CONTRACT_ID,
+    DEPLOYED_TESTNET_CONTRACT,
+    StellarSdk.StrKey.isValidContract,
+  ),
+  rpcUrl: resolvePublicEnvValue(
+    import.meta.env.VITE_STELLAR_RPC_URL,
     "https://soroban-testnet.stellar.org",
-  networkPassphrase:
-    import.meta.env.VITE_STELLAR_NETWORK_PASSPHRASE ?? TESTNET_PASSPHRASE,
-  nativeTokenContractId:
-    import.meta.env.VITE_NATIVE_TOKEN_CONTRACT_ID ??
+    isHttpUrl,
+  ),
+  networkPassphrase: resolvePublicEnvValue(
+    import.meta.env.VITE_STELLAR_NETWORK_PASSPHRASE,
+    TESTNET_PASSPHRASE,
+    (value) => value === TESTNET_PASSPHRASE,
+  ),
+  nativeTokenContractId: resolvePublicEnvValue(
+    import.meta.env.VITE_NATIVE_TOKEN_CONTRACT_ID,
     "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC",
-  readSource:
-    import.meta.env.VITE_AGENTRAIL_READ_SOURCE ?? DEPLOYED_TESTNET_READ_SOURCE,
+    StellarSdk.StrKey.isValidContract,
+  ),
+  readSource: resolvePublicEnvValue(
+    import.meta.env.VITE_AGENTRAIL_READ_SOURCE,
+    DEPLOYED_TESTNET_READ_SOURCE,
+    StellarSdk.StrKey.isValidEd25519PublicKey,
+  ),
+  network: "TESTNET",
+  networkLabel: "Testnet",
+  explorerBaseUrl: "https://stellar.expert/explorer/testnet",
   demoMode: import.meta.env.VITE_ENABLE_DEMO_MODE === "true",
 };
+
+export const agentRailContractExplorerUrl =
+  `${stellarConfig.explorerBaseUrl}/contract/${stellarConfig.contractId}`;
 
 export type WalletState = {
   address: string;
@@ -105,7 +147,12 @@ function validateWalletNetwork(network: FreighterNetwork) {
   if (network.error) {
     throw new Error("Freighter network could not be read.");
   }
-  if (network.networkPassphrase !== stellarConfig.networkPassphrase) {
+  const walletPassphrase = network.networkPassphrase?.trim();
+  const walletNetwork = network.network?.trim().toUpperCase();
+  const valid = walletPassphrase
+    ? walletPassphrase === stellarConfig.networkPassphrase
+    : walletNetwork === stellarConfig.network;
+  if (!valid) {
     throw new Error(
       `Switch Freighter to Stellar Testnet before signing. Current network: ${
         network.network ?? "unknown"
@@ -117,6 +164,10 @@ function validateWalletNetwork(network: FreighterNetwork) {
 export async function assertFreighterNetwork() {
   const network = (await getNetwork()) as FreighterNetwork;
   validateWalletNetwork(network);
+}
+
+export function walletMatchesConfiguredNetwork(wallet: WalletState): boolean {
+  return wallet.networkPassphrase.trim() === stellarConfig.networkPassphrase;
 }
 
 export function stroopsFromDecimal(input: string): bigint {

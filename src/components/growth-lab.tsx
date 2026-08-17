@@ -39,6 +39,7 @@ import {
   trackEvent,
 } from "@/lib/product-analytics";
 import {
+  agentRailContractExplorerUrl,
   verifyAgentRailTestnetTransaction,
   type TestnetTransactionVerification,
   type WalletState,
@@ -197,7 +198,7 @@ export function GrowthLab({
     trackEvent("growth_mission_started", { mission, role });
     if (mission === "explore_contract") {
       window.open(
-        "https://stellar.expert/explorer/testnet/contract/CB6QV6VUJH4FRSLZRTOV2HBIIXSZ4V2YRTCE3S5U4KCLZE7QFW4YTLV5",
+        agentRailContractExplorerUrl,
         "_blank",
         "noopener,noreferrer",
       );

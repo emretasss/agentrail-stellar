@@ -2,6 +2,7 @@ import {
   Activity,
   CircleHelp,
   ExternalLink,
+  LogOut,
   Menu,
   Search,
   Radio,
@@ -16,7 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import LoadingState from "@/components/ui/loading-state";
 import { cn } from "@/lib/utils";
-import type { WalletState } from "@/lib/stellar";
+import { agentRailContractExplorerUrl, type WalletState } from "@/lib/stellar";
 import {
   getWorkspaceGroup,
   getWorkspaceNavItem,
@@ -43,6 +44,7 @@ export function AppShell({
   dataMode,
   onNavigate,
   onConnect,
+  onDisconnect,
   onOpenOnboarding,
 }: {
   children: React.ReactNode;
@@ -53,6 +55,7 @@ export function AppShell({
   dataMode: "loading" | "live" | "demo" | "error";
   onNavigate: (view: AppView) => void;
   onConnect: () => void;
+  onDisconnect: () => void;
   onOpenOnboarding: () => void;
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -193,7 +196,7 @@ export function AppShell({
             )}
           </div>
           <a
-            href="https://stellar.expert/explorer/testnet/contract/CB6QV6VUJH4FRSLZRTOV2HBIIXSZ4V2YRTCE3S5U4KCLZE7QFW4YTLV5"
+            href={agentRailContractExplorerUrl}
             target="_blank"
             rel="noreferrer"
             className="flex items-center gap-2 px-3 text-[10px] text-slate-600 transition hover:text-slate-300"
@@ -237,23 +240,39 @@ export function AppShell({
               <Sparkles size={14} />
               Create with AI
             </Button>
-            <Button
-              variant={wallet ? "outline" : "default"}
-              onClick={onConnect}
-              disabled={connecting}
-              className="max-w-[190px]"
-            >
-              {connecting ? (
-                <span className="size-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-              ) : wallet ? (
-                <span className="relative flex size-5 items-center justify-center rounded-full bg-emerald-400/10">
-                  <span className="size-1.5 rounded-full bg-emerald-400" />
-                </span>
-              ) : (
-                <Wallet size={15} />
-              )}
-              <span className="truncate">{wallet ? shortAddress(wallet.address) : "Connect wallet"}</span>
-            </Button>
+            {wallet ? (
+              <div className="flex items-center gap-1.5">
+                <div className="flex h-10 max-w-[150px] items-center gap-2 rounded-lg border border-white/10 bg-white/[.035] px-3 text-sm text-slate-100">
+                  <span className="relative flex size-5 shrink-0 items-center justify-center rounded-full bg-emerald-400/10">
+                    <span className="size-1.5 rounded-full bg-emerald-400" />
+                  </span>
+                  <span className="truncate">{shortAddress(wallet.address)}</span>
+                </div>
+                <Button
+                  variant="ghost"
+                  onClick={onDisconnect}
+                  aria-label="Disconnect wallet"
+                  title="Disconnect wallet"
+                  className="px-3 text-slate-400 hover:text-red-300"
+                >
+                  <LogOut size={15} />
+                  <span className="hidden xl:inline">Disconnect</span>
+                </Button>
+              </div>
+            ) : (
+              <Button
+                onClick={onConnect}
+                disabled={connecting}
+                className="max-w-[190px]"
+              >
+                {connecting ? (
+                  <span className="size-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                ) : (
+                  <Wallet size={15} />
+                )}
+                <span className="truncate">Connect wallet</span>
+              </Button>
+            )}
           </div>
         </header>
 

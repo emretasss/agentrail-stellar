@@ -69,6 +69,8 @@ function isWorkspaceView(value: string): value is AppView {
   return workspaceViews.includes(value as AppView);
 }
 
+const WALLET_DISCONNECTED_KEY = "agentrail.wallet-disconnected.v1";
+
 function App() {
   const [activeView, setActiveView] = useState<AppView>(() => {
     const hash = window.location.hash.replace("#", "");
@@ -118,11 +120,28 @@ function App() {
 
   useEffect(() => {
     void refreshProtocol();
-    checkFreighter().then((connected) => {
-      setWallet(connected);
-      if (connected) recordWalletConnection(connected.address);
-    });
+    if (window.localStorage.getItem(WALLET_DISCONNECTED_KEY) !== "true") {
+      checkFreighter().then((connected) => {
+        setWallet(connected);
+        if (connected) recordWalletConnection(connected.address);
+      });
+    }
   }, []);
+
+  useEffect(() => {
+    if (!workspaceOpen) return;
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") {
+        void refreshProtocol({ silent: true });
+      }
+    };
+    const timer = window.setInterval(refreshWhenVisible, 30_000);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+    };
+  }, [workspaceOpen]);
 
   useEffect(() => {
     if (!workspaceOpen || window.localStorage.getItem("agentrail.onboarding.seen")) {
@@ -146,8 +165,8 @@ function App() {
     return () => window.removeEventListener("hashchange", onHashChange);
   }, []);
 
-  async function refreshProtocol() {
-    setDataMode("loading");
+  async function refreshProtocol({ silent = false }: { silent?: boolean } = {}) {
+    if (!silent) setDataMode("loading");
     try {
       const snapshot = await loadProtocolSnapshot();
       setAgents(snapshot.agents);
@@ -226,6 +245,7 @@ function App() {
     setBusy("wallet");
     try {
       const connected = await connectFreighter();
+      window.localStorage.removeItem(WALLET_DISCONNECTED_KEY);
       setWallet(connected);
       recordWalletConnection(connected.address);
       pushActivity(
@@ -245,6 +265,23 @@ function App() {
     } finally {
       setBusy(null);
     }
+  }
+
+  function handleDisconnect() {
+    if (!wallet) return;
+    const address = wallet.address;
+    window.localStorage.setItem(WALLET_DISCONNECTED_KEY, "true");
+    setWallet(null);
+    resetTransaction();
+    trackEvent("wallet_disconnected");
+    pushActivity(
+      "Wallet disconnected",
+      `${address.slice(0, 8)}… was removed from this AgentRail session.`,
+      "warning",
+    );
+    toast.success("Wallet disconnected", {
+      description: "Reconnect Freighter when you are ready to sign again.",
+    });
   }
 
   function requireWallet() {
@@ -672,6 +709,7 @@ function App() {
         dataMode={dataMode}
         onNavigate={navigate}
         onConnect={handleConnect}
+        onDisconnect={handleDisconnect}
         onOpenOnboarding={() => setOnboardingOpen(true)}
       >
         <AnimatePresence mode="wait">

@@ -27,9 +27,9 @@ import {
   getFeedback,
   getVerifiedTestnetProofs,
 } from "@/lib/product-analytics";
+import { agentRailContractExplorerUrl } from "@/lib/stellar";
 
-const contractUrl =
-  "https://stellar.expert/explorer/testnet/contract/CB6QV6VUJH4FRSLZRTOV2HBIIXSZ4V2YRTCE3S5U4KCLZE7QFW4YTLV5";
+const contractUrl = agentRailContractExplorerUrl;
 const feedbackFormUrl =
   "https://docs.google.com/forms/d/e/1FAIpQLSfWWZxgMNLxVi7SHGKc9Y-Q66d5Dy4KHZSi72fKTtWPUFhX2A/viewform";
 

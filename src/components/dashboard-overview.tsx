@@ -65,6 +65,22 @@ export function DashboardOverview({
   onHireAgent: (agent: Agent) => void;
 }) {
   const attentionCount = jobs.filter((job) => job.status === "Delivered" || job.status === "Disputed").length;
+  const isLive = dataMode === "live";
+  const isError = dataMode === "error";
+  const networkBadge = isLive ? "Operational" : isError ? "Unavailable" : "Checking";
+  const networkHeading = isLive
+    ? "Contract state verified"
+    : isError
+      ? "Contract state unavailable"
+      : "Connecting to Testnet";
+  const rpcState = isLive ? "Connected" : isError ? "Unavailable" : "Checking";
+  const metricHint = isError
+    ? "Unavailable — retry contract read"
+    : dataMode === "loading"
+      ? "Syncing verified contract state"
+      : dataMode === "demo"
+        ? "Demo workspace data"
+        : null;
 
   return (
     <div className="grid gap-4">
@@ -92,7 +108,7 @@ export function DashboardOverview({
             <CardContent className="relative p-5">
               <div className="metric-card-line absolute inset-x-0 top-0 h-px opacity-80" />
               <div className="flex items-start justify-between"><div><p className="text-[11px] font-medium text-[#9ba6bd]">{label}</p><p className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-[#f3f6ff]">{stats[key]}<span className="ml-1 text-xs font-medium text-[#8d98ae]">{suffix}</span></p></div><span className="metric-card-icon grid size-10 place-items-center rounded-xl border"><Icon size={16} /></span></div>
-              <p className="mt-4 text-[10px] font-medium text-[#7f8ba1]">{dataMode === "live" ? hint : "Current workspace state"}</p>
+              <p className="mt-4 text-[10px] font-medium text-[#7f8ba1]">{metricHint ?? hint}</p>
             </CardContent>
           </Card>
         ))}
@@ -104,9 +120,9 @@ export function DashboardOverview({
           <Card className="overflow-hidden border-[#69e8b6]/[.12]">
             <CardContent className="relative p-5">
               <div className="absolute -right-16 -top-20 size-48 rounded-full bg-[#69e8b6]/[.08] blur-3xl" />
-              <div className="relative flex items-center justify-between"><span className="grid size-10 place-items-center rounded-xl border border-[#69e8b6]/15 bg-[#69e8b6]/[.08] text-[#69e8b6]"><ShieldCheck size={18} /></span><Badge variant={dataMode === "live" ? "default" : "secondary"}>{dataMode === "live" ? "Operational" : "Checking"}</Badge></div>
-              <div className="relative mt-6"><p className="text-[10px] font-bold uppercase tracking-[.15em] text-[#7f8ba1]">Network assurance</p><h3 className="mt-2 text-lg font-semibold text-white">{dataMode === "live" ? "Contract state verified" : "Connecting to Testnet"}</h3><p className="mt-2 text-xs leading-5 text-[#9ba6bd]">RPC state, wallet network and ledger confirmation are checked before every settlement.</p></div>
-              <div className="relative mt-5 grid grid-cols-3 gap-2">{[["RPC", dataMode === "live" ? "Connected" : "Checking"], ["Ledger", latestLedger?.toLocaleString() ?? "—"], ["Finality", "≈ 5 sec"]].map(([label, value]) => <div key={label} className="rounded-lg border border-white/[.07] bg-white/[.03] p-2.5"><span className="block text-[8px] font-bold uppercase tracking-wider text-[#778298]">{label}</span><strong className="mt-1.5 block truncate text-[10px] text-[#d5dceb]">{value}</strong></div>)}</div>
+              <div className="relative flex items-center justify-between"><span className="grid size-10 place-items-center rounded-xl border border-[#69e8b6]/15 bg-[#69e8b6]/[.08] text-[#69e8b6]"><ShieldCheck size={18} /></span><Badge variant={isLive ? "default" : "secondary"}>{networkBadge}</Badge></div>
+              <div className="relative mt-6"><p className="text-[10px] font-bold uppercase tracking-[.15em] text-[#7f8ba1]">Network assurance</p><h3 className="mt-2 text-lg font-semibold text-white">{networkHeading}</h3><p className="mt-2 text-xs leading-5 text-[#9ba6bd]">{isError ? "The last contract read failed. Retry to restore verified on-chain metrics." : "RPC state, wallet network and ledger confirmation are checked before every settlement."}</p></div>
+              <div className="relative mt-5 grid grid-cols-3 gap-2">{[["RPC", rpcState], ["Ledger", latestLedger?.toLocaleString() ?? "—"], ["Finality", "≈ 5 sec"]].map(([label, value]) => <div key={label} className="rounded-lg border border-white/[.07] bg-white/[.03] p-2.5"><span className="block text-[8px] font-bold uppercase tracking-wider text-[#778298]">{label}</span><strong className="mt-1.5 block truncate text-[10px] text-[#d5dceb]">{value}</strong></div>)}</div>
               {dataMode === "error" && <Button className="relative mt-4" size="sm" variant="outline" onClick={onRefresh}><RefreshCw size={13} /> Retry contract read</Button>}
             </CardContent>
           </Card>
