@@ -678,6 +678,7 @@ function App() {
                   stats={stats}
                   dataMode={dataMode}
                   latestLedger={latestLedger}
+                  jobs={jobs}
                   onRegisterAgent={() => {
                     resetTransaction();
                     setRegisterOpen(true);

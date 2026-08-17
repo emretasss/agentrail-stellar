@@ -12,6 +12,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ProtocolPulse } from "@/components/protocol-pulse";
+import { MissionFunnel } from "@/components/mission-funnel";
+import type { Job } from "@/types/agentrail";
 
 type Stats = {
   agents: number;
@@ -55,6 +57,7 @@ export function DashboardOverview({
   stats,
   dataMode,
   latestLedger,
+  jobs,
   onCreateJob,
   onRegisterAgent,
   onRefresh,
@@ -62,6 +65,7 @@ export function DashboardOverview({
   stats: Stats;
   dataMode: "loading" | "live" | "demo" | "error";
   latestLedger: number | null;
+  jobs: Job[];
   onCreateJob: () => void;
   onRegisterAgent: () => void;
   onRefresh: () => void;
@@ -208,6 +212,7 @@ export function DashboardOverview({
         </Card>
       </section>
       <ProtocolPulse mode={dataMode} ledger={latestLedger} />
+      <MissionFunnel jobs={jobs} />
     </>
   );
 }
