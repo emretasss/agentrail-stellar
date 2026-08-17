@@ -3,6 +3,7 @@ import {
   CircleHelp,
   ExternalLink,
   Menu,
+  Search,
   Radio,
   ShieldCheck,
   Sparkles,
@@ -10,7 +11,7 @@ import {
   X,
 } from "lucide-react";
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import LoadingState from "@/components/ui/loading-state";
@@ -22,6 +23,7 @@ import {
   workspaceMobileNavigation,
   type AppView,
 } from "@/config/workspace-navigation";
+import { CommandPalette } from "@/components/command-palette";
 
 export type { AppView } from "@/config/workspace-navigation";
 
@@ -52,9 +54,21 @@ export function AppShell({
   onOpenOnboarding: () => void;
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [commandOpen, setCommandOpen] = useState(false);
   const nav = getWorkspaceGroup("workspace");
   const launchNav = getWorkspaceGroup("launch");
   const meta = getWorkspaceNavItem(activeView);
+
+  useEffect(() => {
+    const open = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setCommandOpen(true);
+      }
+    };
+    window.addEventListener("keydown", open);
+    return () => window.removeEventListener("keydown", open);
+  }, []);
 
   function navigate(view: AppView) {
     onNavigate(view);
@@ -206,6 +220,9 @@ export function AppShell({
             <p className="hidden text-[10px] text-slate-600 sm:block">{meta.description}</p>
           </div>
           <div className="ml-auto flex items-center gap-2">
+            <Button variant="ghost" size="sm" className="hidden text-slate-500 md:inline-flex" onClick={() => setCommandOpen(true)}>
+              <Search size={14} /> Search <span className="rounded border border-white/[.08] px-1.5 py-0.5 text-[8px]">⌘K</span>
+            </Button>
             <Button
               variant="ghost"
               size="sm"
@@ -253,6 +270,7 @@ export function AppShell({
           </button>
         ))}
       </nav>
+      <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} onNavigate={navigate} onTour={onOpenOnboarding} />
     </div>
   );
 }
