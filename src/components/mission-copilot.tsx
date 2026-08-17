@@ -7,9 +7,11 @@ import {
   Clock3,
   Copy,
   ShieldAlert,
+  ShieldCheck,
   Sparkles,
   Wallet,
 } from "lucide-react";
+import { signMessage } from "@stellar/freighter-api";
 import { motion } from "framer-motion";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -22,7 +24,12 @@ import { missionPlaybooks } from "@/data/mission-playbooks";
 import { assessMissionReadiness } from "@/lib/mission-readiness";
 import { MissionQuality } from "@/components/mission-quality";
 import { useLocalStorage } from "@/hooks/use-local-storage";
-import { checkFreighter, stellarConfig, type WalletState } from "@/lib/stellar";
+import {
+  checkFreighter,
+  sha256Hex,
+  stellarConfig,
+  type WalletState,
+} from "@/lib/stellar";
 
 export type MissionPlan = {
   title: string;
@@ -33,6 +40,16 @@ export type MissionPlan = {
   recommendedBudgetXlm: number;
   deadlineLedgers: number;
 };
+
+class WalletAuthorizationError extends Error {}
+
+function containsCredential(value: string) {
+  return (
+    /\bS[A-Z2-7]{55}\b/.test(value) ||
+    /\bAIza[\w-]{30,}\b/.test(value) ||
+    /\b(?:sk|ghp|github_pat)_[A-Za-z0-9_-]{20,}\b/.test(value)
+  );
+}
 
 function localDraft(goal: string): MissionPlan {
   const shortGoal = goal.trim().replace(/\s+/g, " ");
@@ -116,18 +133,60 @@ export function MissionCopilot({
       });
       return;
     }
+    if (containsCredential(goal)) {
+      toast.error("Remove credentials from the mission", {
+        description: "Private keys and API credentials must never be sent to Copilot.",
+      });
+      return;
+    }
     setLoading(true);
     try {
+      const issuedAt = Date.now();
+      const goalHash = await sha256Hex(goal.trim());
+      const authorization = [
+        "AgentRail Mission Copilot",
+        `Wallet: ${wallet.address}`,
+        `Goal SHA-256: ${goalHash}`,
+        `Issued at: ${issuedAt}`,
+      ].join("\n");
+      const signed = await signMessage(authorization, {
+        address: wallet.address,
+        networkPassphrase: stellarConfig.networkPassphrase,
+      });
+      if (
+        signed.error ||
+        typeof signed.signedMessage !== "string" ||
+        signed.signerAddress !== wallet.address
+      ) {
+        throw new WalletAuthorizationError(
+          "Wallet authorization was rejected or signed by a different account.",
+        );
+      }
       const response = await fetch("/api/copilot", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ goal }),
+        body: JSON.stringify({
+          goal,
+          walletAddress: wallet.address,
+          authorization,
+          signature: signed.signedMessage,
+          issuedAt,
+        }),
       });
       const payload = (await response.json()) as MissionPlan & { error?: string };
-      if (!response.ok) throw new Error(payload.error ?? "Copilot request failed.");
+      if (!response.ok) {
+        const message = payload.error ?? "Copilot request failed.";
+        if ([502, 503, 504].includes(response.status)) throw new Error(message);
+        toast.error("Mission was not generated", { description: message });
+        return;
+      }
       setPlan(payload);
       setSource("gemini");
     } catch (error) {
+      if (error instanceof WalletAuthorizationError) {
+        toast.error("Wallet authorization required", { description: error.message });
+        return;
+      }
       setPlan(localDraft(goal));
       setSource("template");
       toast.info("AI endpoint is not configured", {
@@ -221,6 +280,25 @@ export function MissionCopilot({
             The Gemini key stays in a Vercel server function and is never exposed to the
             browser. Generated scopes should be reviewed before funding.
           </p>
+          <div className="rounded-xl border border-emerald-400/15 bg-emerald-400/[.045] p-4">
+            <div className="flex items-center gap-2 text-xs font-semibold text-emerald-200">
+              <ShieldCheck size={14} />
+              Copilot security rules
+            </div>
+            <div className="mt-3 grid gap-2 sm:grid-cols-2">
+              {[
+                "Wallet signature required",
+                "Stellar Testnet enforced",
+                "Secrets blocked before AI",
+                "Human review before funding",
+              ].map((rule) => (
+                <span key={rule} className="flex items-center gap-2 text-[10px] text-slate-400">
+                  <CheckCircle2 size={11} className="text-emerald-300" />
+                  {rule}
+                </span>
+              ))}
+            </div>
+          </div>
         </CardContent>
       </Card>
 
