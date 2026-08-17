@@ -713,6 +713,8 @@ function TransactionStatus({ stage }: { stage: TransactionStage }) {
     success: 100,
     error: 100,
   };
+  const ordered: TransactionStage[] = ["preparing", "signing", "submitting", "confirming", "success"];
+  const currentIndex = stage === "error" ? -1 : ordered.indexOf(stage);
   return (
     <div className="rounded-lg border border-white/[.06] bg-white/[.02] p-3">
       <div className="mb-2 flex items-center justify-between text-[11px]">
@@ -725,6 +727,13 @@ function TransactionStatus({ stage }: { stage: TransactionStage }) {
         value={progress[stage]}
         className={stage === "error" ? "[&>div]:bg-red-400" : ""}
       />
+      <div className="mt-3 grid grid-cols-5 gap-1">
+        {ordered.map((step, index) => {
+          const complete = currentIndex > index || stage === "success";
+          const active = currentIndex === index;
+          return <div key={step} className="min-w-0 text-center"><span className={`mx-auto grid size-5 place-items-center rounded-full border text-[8px] ${complete ? "border-[#61f6c2]/20 bg-[#61f6c2]/10 text-[#61f6c2]" : active ? "border-[#746cff]/30 bg-[#746cff]/15 text-[#aaa5ff]" : "border-white/[.06] text-slate-700"}`}>{complete ? <Check size={9} /> : index + 1}</span><span className={`mt-1 block truncate text-[7px] capitalize ${active ? "text-slate-400" : "text-slate-700"}`}>{step}</span></div>;
+        })}
+      </div>
     </div>
   );
 }
