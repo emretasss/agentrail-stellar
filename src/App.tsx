@@ -2,7 +2,7 @@ import { MessageSquareText, ShieldCheck } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 import { toast, Toaster } from "sonner";
-import { AppShell, type AppView } from "@/components/app-shell";
+import { AppShell } from "@/components/app-shell";
 import { DashboardOverview } from "@/components/dashboard-overview";
 import { GrowthLab } from "@/components/growth-lab";
 import { JobActivity } from "@/components/job-activity";
@@ -59,15 +59,7 @@ import type {
   RegisterForm,
   TransactionStage,
 } from "@/types/agentrail";
-
-const workspaceViews: AppView[] = [
-  "overview",
-  "discover",
-  "jobs",
-  "copilot",
-  "growth",
-  "validation",
-];
+import { workspaceViews, type AppView } from "@/config/workspace-navigation";
 
 function isWorkspaceView(value: string): value is AppView {
   return workspaceViews.includes(value as AppView);

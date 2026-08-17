@@ -1,17 +1,11 @@
 import {
   Activity,
-  Bot,
-  BrainCircuit,
-  BriefcaseBusiness,
   CircleHelp,
   ExternalLink,
-  LayoutDashboard,
   Menu,
   Radio,
   ShieldCheck,
   Sparkles,
-  TrendingUp,
-  Users,
   Wallet,
   X,
 } from "lucide-react";
@@ -22,35 +16,14 @@ import { Button } from "@/components/ui/button";
 import LoadingState from "@/components/ui/loading-state";
 import { cn } from "@/lib/utils";
 import type { WalletState } from "@/lib/stellar";
+import {
+  getWorkspaceGroup,
+  getWorkspaceNavItem,
+  workspaceMobileNavigation,
+  type AppView,
+} from "@/config/workspace-navigation";
 
-export type AppView = "overview" | "discover" | "jobs" | "copilot" | "growth" | "validation";
-
-const viewMeta: Record<AppView, { title: string; subtitle: string }> = {
-  overview: {
-    title: "Command center",
-    subtitle: "Live protocol health, settlement and reputation",
-  },
-  discover: {
-    title: "Agent network",
-    subtitle: "Discover and hire verifiable AI services",
-  },
-  jobs: {
-    title: "Escrow operations",
-    subtitle: "Manage funding, delivery and settlement",
-  },
-  copilot: {
-    title: "Mission Copilot",
-    subtitle: "Design a measurable agent mission with AI",
-  },
-  growth: {
-    title: "Growth Lab",
-    subtitle: "Complete, verify and share a real Testnet mission",
-  },
-  validation: {
-    title: "Validation hub",
-    subtitle: "Track Level 5 growth, feedback and real-user evidence",
-  },
-};
+export type { AppView } from "@/config/workspace-navigation";
 
 export function shortAddress(value: string, size = 5) {
   if (value.length <= size * 2 + 3) return value;
@@ -79,13 +52,9 @@ export function AppShell({
   onOpenOnboarding: () => void;
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const nav = [
-    { id: "overview" as const, label: "Overview", icon: LayoutDashboard },
-    { id: "discover" as const, label: "Discover", icon: Bot },
-    { id: "jobs" as const, label: "Escrow jobs", icon: BriefcaseBusiness, count: jobCount },
-    { id: "copilot" as const, label: "AI Copilot", icon: BrainCircuit, accent: true },
-  ];
-  const meta = viewMeta[activeView];
+  const nav = getWorkspaceGroup("workspace");
+  const launchNav = getWorkspaceGroup("launch");
+  const meta = getWorkspaceNavItem(activeView);
 
   function navigate(view: AppView) {
     onNavigate(view);
@@ -125,8 +94,9 @@ export function AppShell({
 
         <nav className="mt-7 grid gap-1" aria-label="Product navigation">
           <p className="px-3 pb-2 text-[9px] font-semibold uppercase tracking-[.2em] text-slate-700">Workspace</p>
-          {nav.map(({ id, label, icon: Icon, count, accent }) => {
+          {nav.map(({ id, shortLabel: label, icon: Icon, badge }) => {
             const active = activeView === id;
+            const count = id === "jobs" ? jobCount : 0;
             return (
               <button
                 key={id}
@@ -145,13 +115,13 @@ export function AppShell({
                 )}
                 <Icon
                   size={17}
-                  className={cn("relative", active && "text-[#8fe9ff]", accent && !active && "text-[#aaa5ff]")}
+                  className={cn("relative", active && "text-[#8fe9ff]", badge === "AI" && !active && "text-[#aaa5ff]")}
                 />
                 <span className="relative">{label}</span>
-                {accent && (
-                  <Badge variant="secondary" className="relative ml-auto px-1.5 py-0 text-[8px] text-violet-300">AI</Badge>
+                {badge && (
+                  <Badge variant="secondary" className="relative ml-auto px-1.5 py-0 text-[8px] text-violet-300">{badge}</Badge>
                 )}
-                {Boolean(count) && !accent && (
+                {Boolean(count) && !badge && (
                   <span className="relative ml-auto rounded-md bg-white/[.06] px-1.5 py-0.5 text-[9px] text-slate-400">{count}</span>
                 )}
               </button>
@@ -161,32 +131,22 @@ export function AppShell({
 
         <nav className="mt-6 grid gap-1" aria-label="Validation navigation">
           <p className="px-3 pb-2 text-[9px] font-semibold uppercase tracking-[.2em] text-slate-700">Launch</p>
-          <button
-            onClick={() => navigate("growth")}
-            className={cn(
-              "relative flex h-11 items-center gap-3 overflow-hidden rounded-xl px-3 text-sm font-medium transition",
-              activeView === "growth"
-                ? "bg-[#61f6c2]/[.08] text-[#83f8cf]"
-                : "text-slate-500 hover:bg-white/[.035] hover:text-slate-200",
-            )}
-          >
-            <TrendingUp size={17} />
-            Growth Lab
-            <Badge variant="secondary" className="ml-auto px-1.5 py-0 text-[8px] text-emerald-300">NEW</Badge>
-          </button>
-          <button
-            onClick={() => navigate("validation")}
-            className={cn(
-              "relative flex h-11 items-center gap-3 overflow-hidden rounded-xl px-3 text-sm font-medium transition",
-              activeView === "validation"
-                ? "bg-violet-400/[.08] text-violet-200"
-                : "text-slate-500 hover:bg-white/[.035] hover:text-slate-200",
-            )}
-          >
-            <Users size={17} />
-            Validation hub
-            <span className="ml-auto size-1.5 rounded-full bg-amber-300" />
-          </button>
+          {launchNav.map(({ id, label, icon: Icon, badge }) => (
+            <button
+              key={id}
+              onClick={() => navigate(id)}
+              className={cn(
+                "relative flex h-11 items-center gap-3 overflow-hidden rounded-xl px-3 text-sm font-medium transition",
+                activeView === id
+                  ? "bg-[#61f6c2]/[.08] text-[#83f8cf]"
+                  : "text-slate-500 hover:bg-white/[.035] hover:text-slate-200",
+              )}
+            >
+              <Icon size={17} />
+              {label}
+              {badge ? <Badge variant="secondary" className="ml-auto px-1.5 py-0 text-[8px] text-emerald-300">{badge}</Badge> : <span className="ml-auto size-1.5 rounded-full bg-amber-300" />}
+            </button>
+          ))}
           <button
             onClick={onOpenOnboarding}
             className="flex h-11 items-center gap-3 rounded-xl px-3 text-sm font-medium text-slate-500 transition hover:bg-white/[.035] hover:text-slate-200"
@@ -237,13 +197,13 @@ export function AppShell({
           </Button>
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <h1 className="truncate text-sm font-semibold text-white">{meta.title}</h1>
+              <h1 className="truncate text-sm font-semibold text-white">{meta.label}</h1>
               <Badge className="hidden sm:inline-flex">
                 <Radio size={9} className="animate-pulse" />
                 Testnet
               </Badge>
             </div>
-            <p className="hidden text-[10px] text-slate-600 sm:block">{meta.subtitle}</p>
+            <p className="hidden text-[10px] text-slate-600 sm:block">{meta.description}</p>
           </div>
           <div className="ml-auto flex items-center gap-2">
             <Button
@@ -279,14 +239,7 @@ export function AppShell({
       </div>
 
       <nav className="workspace-mobile-nav fixed inset-x-3 bottom-3 z-30 grid grid-cols-6 rounded-2xl border border-white/[.09] p-1.5 shadow-2xl backdrop-blur-2xl lg:hidden">
-        {[
-          { id: "overview" as const, label: "Home", icon: LayoutDashboard },
-          { id: "discover" as const, label: "Agents", icon: Bot },
-          { id: "jobs" as const, label: "Jobs", icon: BriefcaseBusiness },
-          { id: "copilot" as const, label: "Copilot", icon: BrainCircuit },
-          { id: "growth" as const, label: "Grow", icon: TrendingUp },
-          { id: "validation" as const, label: "Proof", icon: ShieldCheck },
-        ].map(({ id, label, icon: Icon }) => (
+        {workspaceMobileNavigation.map(({ id, shortLabel: label, icon: Icon }) => (
           <button
             key={id}
             onClick={() => navigate(id)}
