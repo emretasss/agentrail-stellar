@@ -54,13 +54,19 @@ export function JobActivity({
 }) {
   const [status, setStatus] = useState<JobStatus | "All">("All");
   const [query, setQuery] = useState("");
+  const [sort, setSort] = useState<"attention" | "newest" | "value">("attention");
   const visibleJobs = useMemo(() => {
     const term = query.trim().toLowerCase();
     return jobs.filter((job) => status === "All" || job.status === status).filter((job) => {
       const agent = agents.find((entry) => entry.id === job.agentId);
       return !term || `${job.id} ${job.brief} ${agent?.name ?? ""} ${agent?.handle ?? ""}`.toLowerCase().includes(term);
+    }).sort((a, b) => {
+      if (sort === "value") return Number(b.amountStroops - a.amountStroops);
+      if (sort === "newest") return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      const rank: Record<JobStatus, number> = { Delivered: 0, Disputed: 1, Funded: 2, Released: 3, Refunded: 4 };
+      return rank[a.status] - rank[b.status];
     });
-  }, [agents, jobs, query, status]);
+  }, [agents, jobs, query, sort, status]);
   const statusFilters: Array<JobStatus | "All"> = ["All", "Funded", "Delivered", "Released", "Refunded", "Disputed"];
   return (
     <section className="grid gap-3 xl:grid-cols-[1.4fr_.75fr]">
@@ -74,12 +80,13 @@ export function JobActivity({
         </CardHeader>
         <div className="flex flex-col gap-3 border-t border-white/[.055] px-5 py-3 sm:flex-row sm:items-center">
           <div className="relative sm:w-60"><Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#7f8aa0]" /><Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search mission or agent" aria-label="Search missions" className="h-8 pl-8 text-[10px]" /></div>
-          <div className="flex gap-2 overflow-x-auto">
+          <div className="flex min-w-0 flex-1 gap-2 overflow-x-auto">
           {statusFilters.map((item) => {
             const count = item === "All" ? jobs.length : jobs.filter((job) => job.status === item).length;
             return <button key={item} onClick={() => setStatus(item)} className={cn("shrink-0 rounded-full border px-2.5 py-1 text-[9px] font-semibold transition", status === item ? "border-[#746cff]/30 bg-[#746cff]/10 text-[#b9b5ff]" : "border-white/[.06] text-slate-600 hover:text-slate-300")}>{item} <span className="ml-1 opacity-60">{count}</span></button>;
           })}
           </div>
+          <select aria-label="Sort missions" value={sort} onChange={(event) => setSort(event.target.value as typeof sort)} className="h-8 shrink-0 rounded-lg border border-white/[.08] bg-[#090b18] px-2.5 text-[10px] text-[#a8b2c6] outline-none"><option value="attention">Needs attention</option><option value="newest">Newest first</option><option value="value">Highest value</option></select>
         </div>
         <CardContent className="overflow-x-auto px-0 pb-1">
           <div className="grid gap-2 px-3 pb-3 md:hidden">
