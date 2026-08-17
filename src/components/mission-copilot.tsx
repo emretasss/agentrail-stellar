@@ -106,12 +106,21 @@ export function MissionCopilot({
   const [loading, setLoading] = useState(false);
   const [source, setSource] = useState<"gemini" | "template" | null>(null);
   const requestController = useRef<AbortController | null>(null);
+  const goalInput = useRef<HTMLTextAreaElement | null>(null);
   const charCount = useMemo(() => goal.trim().length, [goal]);
   const readiness = useMemo(() => assessMissionReadiness(goal), [goal]);
   const walletVerified =
     wallet?.networkPassphrase === stellarConfig.networkPassphrase;
 
   useEffect(() => () => requestController.current?.abort(), []);
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      goalInput.current?.focus({ preventScroll: true });
+      goalInput.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
 
   function stopGeneration() {
     requestController.current?.abort();
@@ -255,6 +264,7 @@ export function MissionCopilot({
           </div>
           <div className="relative">
             <Textarea
+              ref={goalInput}
               value={goal}
               onChange={(event) => setGoal(event.target.value)}
               rows={9}
