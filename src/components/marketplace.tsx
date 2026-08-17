@@ -6,6 +6,7 @@ import {
   CircleDollarSign,
   Search,
   SlidersHorizontal,
+  Heart,
   Star,
   Zap,
   X,
@@ -19,6 +20,7 @@ import { Input } from "@/components/ui/input";
 import { decimalFromStroops } from "@/lib/stellar";
 import { cn } from "@/lib/utils";
 import type { Agent } from "@/types/agentrail";
+import { useLocalStorage } from "@/hooks/use-local-storage";
 
 function agentInitials(name: string) {
   return name
@@ -56,19 +58,22 @@ export function Marketplace({
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("All");
   const [sort, setSort] = useState<"trust" | "price" | "experience">("trust");
+  const [favorites, setFavorites] = useLocalStorage<number[]>("agentrail.favorite-agents", []);
+  const [watchlistOnly, setWatchlistOnly] = useState(false);
   const categories = useMemo(() => ["All", ...new Set(agents.map((agent) => agent.category))], [agents]);
   const filtered = useMemo(() => {
     const normalized = query.trim().toLowerCase();
     return agents
       .filter((agent) => category === "All" || agent.category === category)
+      .filter((agent) => !watchlistOnly || favorites.includes(agent.id))
       .filter((agent) => !normalized || [agent.name, agent.handle, agent.category].some((value) => value.toLowerCase().includes(normalized)))
       .sort((a, b) => {
         if (sort === "price") return Number(a.priceStroops - b.priceStroops);
         if (sort === "experience") return b.completed - a.completed;
         return b.rating * b.successRate - a.rating * a.successRate;
       });
-  }, [agents, category, query, sort]);
-  const filteredActive = query.trim() || category !== "All" || sort !== "trust";
+  }, [agents, category, favorites, query, sort, watchlistOnly]);
+  const filteredActive = query.trim() || category !== "All" || sort !== "trust" || watchlistOnly;
 
   return (
     <Card className="min-w-0">
@@ -94,6 +99,7 @@ export function Marketplace({
         <div className="mb-4 flex flex-col gap-3 border-b border-white/[.055] pb-4">
           <div className="flex items-center gap-2 overflow-x-auto pb-1">
             <SlidersHorizontal size={13} className="mr-1 shrink-0 text-slate-600" />
+            <button onClick={() => setWatchlistOnly((current) => !current)} className={cn("shrink-0 rounded-full border px-3 py-1.5 text-[9px] font-semibold transition", watchlistOnly ? "border-[#ff8fbd]/30 bg-[#ff8fbd]/10 text-[#ffb1d0]" : "border-white/[.06] text-slate-600 hover:text-slate-300")}><Heart size={10} className={cn("mr-1 inline", watchlistOnly && "fill-current")} />Watchlist {favorites.length}</button>
             {categories.map((item) => (
               <button key={item} onClick={() => setCategory(item)} className={cn("shrink-0 rounded-full border px-3 py-1.5 text-[9px] font-semibold transition", category === item ? "border-[#746cff]/30 bg-[#746cff]/10 text-[#b8b4ff]" : "border-white/[.06] text-slate-600 hover:text-slate-300")}>{item}</button>
             ))}
@@ -101,7 +107,7 @@ export function Marketplace({
           <div className="flex items-center justify-between gap-3">
             <span className="text-[10px] text-slate-600">{filtered.length} of {agents.length} agents</span>
             <div className="flex items-center gap-2">
-              {filteredActive && <button className="flex items-center gap-1 text-[9px] text-slate-600 hover:text-slate-300" onClick={() => { setQuery(""); setCategory("All"); setSort("trust"); }}><X size={10} /> Reset</button>}
+              {filteredActive && <button className="flex items-center gap-1 text-[9px] text-slate-600 hover:text-slate-300" onClick={() => { setQuery(""); setCategory("All"); setSort("trust"); setWatchlistOnly(false); }}><X size={10} /> Reset</button>}
               <select aria-label="Sort agents" value={sort} onChange={(event) => setSort(event.target.value as typeof sort)} className="rounded-lg border border-white/[.07] bg-[#080916] px-2.5 py-1.5 text-[9px] text-slate-500 outline-none">
                 <option value="trust">Highest trust</option><option value="experience">Most experienced</option><option value="price">Lowest price</option>
               </select>
@@ -141,6 +147,7 @@ export function Marketplace({
                   <p className="mt-0.5 truncate text-[11px] text-slate-600">@{agent.handle}</p>
                 </div>
                 <Badge variant="secondary">{agent.category}</Badge>
+                <button aria-label={`${favorites.includes(agent.id) ? "Remove" : "Add"} ${agent.name} ${favorites.includes(agent.id) ? "from" : "to"} watchlist`} onClick={(event) => { event.stopPropagation(); setFavorites((current) => current.includes(agent.id) ? current.filter((id) => id !== agent.id) : [...current, agent.id]); }} className={cn("grid size-7 shrink-0 place-items-center rounded-lg border transition", favorites.includes(agent.id) ? "border-[#ff8fbd]/20 bg-[#ff8fbd]/10 text-[#ffb1d0]" : "border-white/[.06] text-slate-600 hover:text-white")}><Heart size={12} className={cn(favorites.includes(agent.id) && "fill-current")} /></button>
               </div>
 
               <div className="mt-4 grid grid-cols-3 divide-x divide-white/[.07] rounded-lg border border-white/[.06] bg-slate-950/40 py-2.5">
