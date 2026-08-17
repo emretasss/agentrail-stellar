@@ -1,4 +1,5 @@
-import { Activity, Blocks, ExternalLink, Radio, Server, ShieldCheck, Zap } from "lucide-react";
+import { Activity, Blocks, Copy, ExternalLink, Radio, Server, ShieldCheck, Zap } from "lucide-react";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -39,6 +40,12 @@ export function NetworkExplorer({
       </section>
 
       <ProtocolPulse mode={mode} ledger={ledger} />
+
+      <div className="flex flex-col gap-3 rounded-2xl border border-white/[.08] bg-[#0b0d1c]/85 p-4 sm:flex-row sm:items-center">
+        <span className="grid size-10 shrink-0 place-items-center rounded-xl border border-[#756dff]/20 bg-[#756dff]/10 text-[#bcb8ff]"><Blocks size={16} /></span>
+        <div className="min-w-0 flex-1"><span className="block text-[9px] font-bold uppercase tracking-[.14em] text-[#7f8aa0]">Deployed Testnet contract</span><code className="mt-1 block truncate text-xs text-[#cbd4e5]">{CONTRACT_ID}</code></div>
+        <Button variant="outline" size="sm" onClick={() => { void navigator.clipboard.writeText(CONTRACT_ID); toast.success("Contract ID copied"); }}><Copy size={12} /> Copy contract</Button>
+      </div>
 
       <section className="grid gap-3 lg:grid-cols-[1.25fr_.75fr]">
         <Card>
