@@ -9,6 +9,7 @@ import {
   TrendingUp,
   Users,
   WalletCards,
+  BookOpenCheck,
   type LucideIcon,
 } from "lucide-react";
 
@@ -21,7 +22,8 @@ export type AppView =
   | "validation"
   | "network"
   | "reputation"
-  | "treasury";
+  | "treasury"
+  | "playbooks";
 
 export type WorkspaceNavItem = {
   id: AppView;
@@ -72,6 +74,14 @@ export const workspaceNavigation: WorkspaceNavItem[] = [
     shortLabel: "Trust",
     icon: Fingerprint,
     description: "Explore portable, settlement-backed agent trust",
+    group: "workspace",
+  },
+  {
+    id: "playbooks",
+    label: "Mission playbooks",
+    shortLabel: "Library",
+    icon: BookOpenCheck,
+    description: "Launch from reusable mission and evidence patterns",
     group: "workspace",
   },
   {

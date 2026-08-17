@@ -30,6 +30,8 @@ import { ValidationHub } from "@/components/validation-hub";
 import { NetworkExplorer } from "@/components/network-explorer";
 import { ReputationLab } from "@/components/reputation-lab";
 import { TreasuryConsole } from "@/components/treasury-console";
+import { MissionPlaybooks } from "@/components/mission-playbooks";
+import type { MissionPlaybook } from "@/data/mission-playbooks";
 import {
   initialActivity,
   initialRegisterForm,
@@ -644,6 +646,12 @@ function App() {
     }
   }
 
+  function usePlaybook(playbook: MissionPlaybook) {
+    setBrief(playbook.prompt);
+    navigate("discover");
+    toast.success("Playbook loaded", { description: `Choose an agent for “${playbook.title}”.` });
+  }
+
   return (
     <ThemeProvider defaultTheme="dark">
       <TooltipProvider delayDuration={200}>
@@ -771,6 +779,8 @@ function App() {
             {activeView === "reputation" && <ReputationLab agents={agents} jobs={jobs} />}
 
             {activeView === "treasury" && <TreasuryConsole jobs={jobs} />}
+
+            {activeView === "playbooks" && <MissionPlaybooks onUse={usePlaybook} />}
 
             {activeView === "growth" && (
               <GrowthLab
