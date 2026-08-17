@@ -19,6 +19,7 @@ import { Textarea } from "@/components/ui/textarea";
 import LoadingState from "@/components/ui/loading-state";
 import { missionPlaybooks } from "@/data/mission-playbooks";
 import { assessMissionReadiness } from "@/lib/mission-readiness";
+import { MissionQuality } from "@/components/mission-quality";
 
 export type MissionPlan = {
   title: string;
@@ -216,6 +217,7 @@ export function MissionCopilot({
               </Button>
             </div>
             <p className="text-sm leading-6 text-slate-400">{plan.summary}</p>
+            <MissionQuality plan={plan} />
             <div className="grid grid-cols-2 gap-3">
               <div className="rounded-xl border border-white/[.06] bg-white/[.02] p-3">
                 <CircleDollarSign size={15} className="text-emerald-300" />
