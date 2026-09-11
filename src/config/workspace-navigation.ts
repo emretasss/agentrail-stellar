@@ -10,6 +10,7 @@ import {
   Users,
   WalletCards,
   BookOpenCheck,
+  ListChecks,
   type LucideIcon,
 } from "lucide-react";
 
@@ -17,6 +18,7 @@ export type AppView =
   | "overview"
   | "discover"
   | "jobs"
+  | "milestones"
   | "copilot"
   | "growth"
   | "validation"
@@ -59,6 +61,15 @@ export const workspaceNavigation: WorkspaceNavItem[] = [
     icon: BriefcaseBusiness,
     description: "Manage funding, delivery and settlement",
     group: "workspace",
+  },
+  {
+    id: "milestones",
+    label: "Milestone escrow",
+    shortLabel: "Stages",
+    icon: ListChecks,
+    description: "Split complex missions into protected releases",
+    group: "workspace",
+    badge: "NEW",
   },
   {
     id: "treasury",

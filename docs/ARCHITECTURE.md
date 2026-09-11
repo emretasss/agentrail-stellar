@@ -40,6 +40,7 @@ Workspaces:
 - Command Center
 - Agent Network
 - Escrow Operations
+- Milestone Escrow
 - Treasury Console
 - Reputation Lab
 - Mission Playbooks
@@ -112,6 +113,28 @@ stateDiagram-v2
     Disputed --> Refunded
 ```
 
+Complex missions use a second bounded state machine. A plan contains 2–8
+milestones, each with its own brief proof, amount, delivery proof, deadline, and
+status. `current_index` prevents later work from bypassing earlier acceptance.
+Only the current delivered milestone can release funds. The last approval
+closes the parent job and updates reputation once.
+
+```mermaid
+stateDiagram-v2
+    [*] --> Funded
+    Funded --> Delivered: agent proof
+    Funded --> Refunded: deadline expired
+    Delivered --> Released: buyer approval
+    Released --> Funded: advance to next stage
+    Released --> [*]: final stage + rating
+```
+
+The contract records `released_amount` and computes expiry refunds as
+`job.amount - released_amount`. Refund is rejected after the current delivery
+proof is recorded, preventing a buyer from receiving the work and reclaiming
+the same escrow slice. Legacy settlement entrypoints reject milestone jobs so a
+plan cannot be paid twice through the single-delivery path.
+
 Owner, payer, and administrator mutations require explicit authorization.
 Arithmetic uses checked operations. Registry reads offer bounded pagination
 with a maximum page size of 50.
@@ -164,12 +187,14 @@ records and must not appear in public screenshots or narrative summaries.
 | Gemini unavailable | Generate and label a local scope template |
 | Feedback collector unavailable | Preserve local evidence and export |
 | Demo data enabled | Prevent all real escrow actions against sample identifiers |
+| Milestone method absent on an older deployment | Load legacy agents/jobs and show the labeled staged-lifecycle preview |
 
 ## Scale path
 
-1. Index typed contract events for cross-device history and search.
-2. Replace the optional feedback webhook with a durable consented store.
-3. Add cache/retry policy for high-volume contract reads.
-4. Add Stellar Wallets Kit for multi-wallet onboarding.
-5. Add stablecoin escrow and separate x402/MPP modes for per-request agent APIs.
-6. Perform independent contract and application security review before Mainnet.
+1. Deploy v0.3 to Testnet, run a public three-stage lifecycle, and update the production contract ID.
+2. Index typed contract events for cross-device history and search.
+3. Replace the optional feedback webhook with a durable consented store.
+4. Add cache/retry policy for high-volume contract reads.
+5. Add Stellar Wallets Kit for multi-wallet onboarding.
+6. Add stablecoin escrow and separate x402/MPP modes for per-request agent APIs.
+7. Perform independent contract and application security review before Mainnet.

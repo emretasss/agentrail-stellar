@@ -7,7 +7,15 @@ import {
   signTransaction,
 } from "@stellar/freighter-api";
 import type { TransactionStage } from "@/types/agentrail";
-import type { Agent, Job, JobStatus, ProtocolSnapshot } from "@/types/agentrail";
+import type {
+  Agent,
+  Job,
+  JobStatus,
+  MilestoneDraft,
+  MilestonePlan,
+  MilestoneStatus,
+  ProtocolSnapshot,
+} from "@/types/agentrail";
 
 const TESTNET_PASSPHRASE = "Test SDF Network ; September 2015";
 const DEPLOYED_TESTNET_CONTRACT =
@@ -230,6 +238,23 @@ export const scVal = {
   bytes32(hex: string) {
     return StellarSdk.nativeToScVal(hexToBytes(hex), { type: "bytes" });
   },
+  milestoneInputs(
+    milestones: Array<MilestoneDraft & { briefHash: string; deadlineLedger: number }>,
+  ) {
+    const symbol = (value: string) =>
+      StellarSdk.nativeToScVal(value, { type: "symbol" });
+    const entry = (key: string, val: StellarSdk.xdr.ScVal) =>
+      new StellarSdk.xdr.ScMapEntry({ key: symbol(key), val });
+    return StellarSdk.xdr.ScVal.scvVec(
+      milestones.map((milestone) =>
+        StellarSdk.xdr.ScVal.scvMap([
+          entry("amount", StellarSdk.nativeToScVal(stroopsFromDecimal(milestone.amount), { type: "i128" })),
+          entry("brief_hash", StellarSdk.nativeToScVal(hexToBytes(milestone.briefHash), { type: "bytes" })),
+          entry("deadline_ledger", StellarSdk.nativeToScVal(milestone.deadlineLedger, { type: "u32" })),
+        ]),
+      ),
+    );
+  },
 };
 
 export async function getLatestLedgerSequence(): Promise<number> {
@@ -379,12 +404,37 @@ type NativeJob = {
   closed_ledger: number;
 };
 
+type NativeMilestone = {
+  index: number;
+  brief_hash: unknown;
+  deliverable_hash: unknown;
+  amount: bigint | number | string;
+  deadline_ledger: number;
+  status: number;
+  delivered_ledger: number;
+  closed_ledger: number;
+};
+
+type NativeMilestonePlan = {
+  job_id: bigint | number;
+  current_index: number;
+  released_amount: bigint | number | string;
+  milestones: NativeMilestone[];
+};
+
 const JOB_STATUS: JobStatus[] = [
   "Funded",
   "Delivered",
   "Released",
   "Refunded",
   "Disputed",
+];
+
+const MILESTONE_STATUS: MilestoneStatus[] = [
+  "Funded",
+  "Delivered",
+  "Released",
+  "Refunded",
 ];
 
 function addressToString(value: unknown): string {
@@ -435,9 +485,10 @@ async function readAgentRailCall<T>(
 }
 
 export async function loadProtocolSnapshot(): Promise<ProtocolSnapshot> {
-  const [nativeAgents, nativeJobs, ledger] = await Promise.all([
+  const [nativeAgents, nativeJobs, nativeMilestonePlans, ledger] = await Promise.all([
     readAgentRailCall<NativeAgent[]>("list_agents"),
     readAgentRailCall<NativeJob[]>("list_jobs"),
+    readAgentRailCall<NativeMilestonePlan[]>("list_milestone_plans").catch(() => []),
     getLatestLedgerSequence(),
   ]);
 
@@ -485,9 +536,27 @@ export async function loadProtocolSnapshot(): Promise<ProtocolSnapshot> {
     };
   });
 
+  const milestonePlans: MilestonePlan[] = nativeMilestonePlans.map((plan) => ({
+    jobId: Number(plan.job_id),
+    currentIndex: Number(plan.current_index),
+    releasedAmountStroops: BigInt(plan.released_amount),
+    chainBacked: true,
+    milestones: plan.milestones.map((milestone) => ({
+      index: Number(milestone.index),
+      briefHash: bytesToHex(milestone.brief_hash),
+      deliverableHash: bytesToHex(milestone.deliverable_hash) || undefined,
+      amountStroops: BigInt(milestone.amount),
+      deadlineLedger: Number(milestone.deadline_ledger),
+      status: MILESTONE_STATUS[Number(milestone.status)] ?? "Funded",
+      deliveredLedger: Number(milestone.delivered_ledger) || undefined,
+      closedLedger: Number(milestone.closed_ledger) || undefined,
+    })),
+  }));
+
   return {
     agents,
     jobs,
+    milestonePlans,
     ledger,
     loadedAt: new Date().toISOString(),
   };

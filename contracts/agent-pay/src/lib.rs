@@ -10,7 +10,10 @@ const INSTANCE_TTL_BUMP: u32 = 518_400;
 const MAX_PAGE_SIZE: u32 = 50;
 
 contractmeta!(key = "name", val = "AgentRail Escrow");
-contractmeta!(key = "version", val = "0.2.0");
+contractmeta!(key = "version", val = "0.3.0");
+
+const MIN_MILESTONES: u32 = 2;
+const MAX_MILESTONES: u32 = 8;
 
 #[contracttype]
 #[derive(Clone)]
@@ -23,6 +26,8 @@ pub enum DataKey {
     JobIds,
     Agent(u64),
     Job(u64),
+    MilestoneJobIds,
+    MilestonePlan(u64),
 }
 
 #[contracttype]
@@ -72,6 +77,46 @@ pub struct Job {
 }
 
 #[contracttype]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[repr(u32)]
+pub enum MilestoneStatus {
+    Funded = 0,
+    Delivered = 1,
+    Released = 2,
+    Refunded = 3,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MilestoneInput {
+    pub brief_hash: BytesN<32>,
+    pub amount: i128,
+    pub deadline_ledger: u32,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct Milestone {
+    pub index: u32,
+    pub brief_hash: BytesN<32>,
+    pub deliverable_hash: BytesN<32>,
+    pub amount: i128,
+    pub deadline_ledger: u32,
+    pub status: MilestoneStatus,
+    pub delivered_ledger: u32,
+    pub closed_ledger: u32,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MilestonePlan {
+    pub job_id: u64,
+    pub current_index: u32,
+    pub released_amount: i128,
+    pub milestones: Vec<Milestone>,
+}
+
+#[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ProtocolStats {
     pub agent_count: u64,
@@ -95,6 +140,16 @@ pub struct JobEvent {
     pub job_id: u64,
 }
 
+#[contractevent(topics = ["milestone"])]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MilestoneEvent {
+    #[topic]
+    pub action: Symbol,
+    pub job_id: u64,
+    pub index: u32,
+    pub amount: i128,
+}
+
 #[contracterror]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
 #[repr(u32)]
@@ -112,6 +167,12 @@ pub enum Error {
     InvalidRating = 11,
     InvalidLimit = 12,
     Overflow = 13,
+    InvalidMilestoneCount = 14,
+    InvalidMilestone = 15,
+    MilestoneNotFound = 16,
+    MilestoneOutOfOrder = 17,
+    InvalidMilestoneRating = 18,
+    MilestoneFlowRequired = 19,
 }
 
 #[contract]
@@ -134,6 +195,9 @@ impl AgentRailContract {
         env.storage()
             .instance()
             .set(&DataKey::JobIds, &Vec::<u64>::new(&env));
+        env.storage()
+            .instance()
+            .set(&DataKey::MilestoneJobIds, &Vec::<u64>::new(&env));
         bump_ttl(&env);
     }
 
@@ -300,6 +364,98 @@ impl AgentRailContract {
         Ok(id)
     }
 
+    pub fn create_milestone_job(
+        env: Env,
+        payer: Address,
+        agent_id: u64,
+        brief_hash: BytesN<32>,
+        inputs: Vec<MilestoneInput>,
+    ) -> Result<u64, Error> {
+        ensure_initialized(&env)?;
+        payer.require_auth();
+
+        let agent = read_agent(&env, agent_id)?;
+        if !agent.active {
+            return Err(Error::AgentInactive);
+        }
+        if inputs.len() < MIN_MILESTONES || inputs.len() > MAX_MILESTONES {
+            return Err(Error::InvalidMilestoneCount);
+        }
+
+        let current_ledger = env.ledger().sequence();
+        let mut total = 0i128;
+        let mut previous_deadline = current_ledger;
+        let mut milestones = Vec::<Milestone>::new(&env);
+        for (index, input) in inputs.iter().enumerate() {
+            if input.amount <= 0 || input.deadline_ledger <= previous_deadline {
+                return Err(Error::InvalidMilestone);
+            }
+            total = total.checked_add(input.amount).ok_or(Error::Overflow)?;
+            previous_deadline = input.deadline_ledger;
+            milestones.push_back(Milestone {
+                index: index as u32,
+                brief_hash: input.brief_hash,
+                deliverable_hash: BytesN::from_array(&env, &[0; 32]),
+                amount: input.amount,
+                deadline_ledger: input.deadline_ledger,
+                status: MilestoneStatus::Funded,
+                delivered_ledger: 0,
+                closed_ledger: 0,
+            });
+        }
+        if total < agent.price {
+            return Err(Error::InvalidAmount);
+        }
+
+        let token_id = read_token(&env)?;
+        let escrow = env.current_contract_address();
+        token::Client::new(&env, &token_id).transfer(&payer, &MuxedAddress::from(&escrow), &total);
+
+        let id = next_u64(&env, DataKey::NextJobId)?;
+        let job = Job {
+            id,
+            agent_id,
+            payer,
+            agent_owner: agent.owner,
+            brief_hash,
+            deliverable_hash: BytesN::from_array(&env, &[0; 32]),
+            amount: total,
+            deadline_ledger: previous_deadline,
+            status: JobStatus::Funded,
+            rating: 0,
+            created_ledger: current_ledger,
+            delivered_ledger: 0,
+            closed_ledger: 0,
+        };
+        let plan = MilestonePlan {
+            job_id: id,
+            current_index: 0,
+            released_amount: 0,
+            milestones,
+        };
+
+        env.storage().instance().set(&DataKey::Job(id), &job);
+        env.storage()
+            .instance()
+            .set(&DataKey::MilestonePlan(id), &plan);
+        let mut job_ids = read_job_ids(&env)?;
+        job_ids.push_back(id);
+        env.storage().instance().set(&DataKey::JobIds, &job_ids);
+        let mut milestone_ids = read_milestone_job_ids(&env);
+        milestone_ids.push_back(id);
+        env.storage()
+            .instance()
+            .set(&DataKey::MilestoneJobIds, &milestone_ids);
+        bump_ttl(&env);
+        JobEvent {
+            action: symbol_short!("staged"),
+            job_id: id,
+        }
+        .publish(&env);
+
+        Ok(id)
+    }
+
     pub fn deliver_job(
         env: Env,
         agent_owner: Address,
@@ -310,6 +466,7 @@ impl AgentRailContract {
         agent_owner.require_auth();
 
         let mut job = read_job(&env, job_id)?;
+        ensure_legacy_job(&env, job_id)?;
         if job.agent_owner != agent_owner {
             return Err(Error::Unauthorized);
         }
@@ -340,6 +497,7 @@ impl AgentRailContract {
         }
 
         let mut job = read_job(&env, job_id)?;
+        ensure_legacy_job(&env, job_id)?;
         if job.payer != payer {
             return Err(Error::Unauthorized);
         }
@@ -385,11 +543,215 @@ impl AgentRailContract {
         Ok(job)
     }
 
+    pub fn deliver_milestone(
+        env: Env,
+        agent_owner: Address,
+        job_id: u64,
+        index: u32,
+        deliverable_hash: BytesN<32>,
+    ) -> Result<MilestonePlan, Error> {
+        ensure_initialized(&env)?;
+        agent_owner.require_auth();
+
+        let mut job = read_job(&env, job_id)?;
+        if job.agent_owner != agent_owner {
+            return Err(Error::Unauthorized);
+        }
+        if job.status != JobStatus::Funded {
+            return Err(Error::InvalidStatus);
+        }
+        let mut plan = read_milestone_plan(&env, job_id)?;
+        if index != plan.current_index {
+            return Err(Error::MilestoneOutOfOrder);
+        }
+        let mut milestone = plan.milestones.get(index).ok_or(Error::MilestoneNotFound)?;
+        if milestone.status != MilestoneStatus::Funded {
+            return Err(Error::InvalidStatus);
+        }
+
+        milestone.deliverable_hash = deliverable_hash.clone();
+        milestone.status = MilestoneStatus::Delivered;
+        milestone.delivered_ledger = env.ledger().sequence();
+        plan.milestones.set(index, milestone.clone());
+        job.deliverable_hash = deliverable_hash;
+        job.delivered_ledger = milestone.delivered_ledger;
+        env.storage()
+            .instance()
+            .set(&DataKey::MilestonePlan(job_id), &plan);
+        env.storage().instance().set(&DataKey::Job(job_id), &job);
+        bump_ttl(&env);
+        MilestoneEvent {
+            action: symbol_short!("deliver"),
+            job_id,
+            index,
+            amount: milestone.amount,
+        }
+        .publish(&env);
+
+        Ok(plan)
+    }
+
+    pub fn approve_milestone(
+        env: Env,
+        payer: Address,
+        job_id: u64,
+        index: u32,
+        rating: u32,
+    ) -> Result<MilestonePlan, Error> {
+        ensure_initialized(&env)?;
+        payer.require_auth();
+
+        let mut job = read_job(&env, job_id)?;
+        if job.payer != payer {
+            return Err(Error::Unauthorized);
+        }
+        if job.status != JobStatus::Funded {
+            return Err(Error::InvalidStatus);
+        }
+        let mut plan = read_milestone_plan(&env, job_id)?;
+        if index != plan.current_index {
+            return Err(Error::MilestoneOutOfOrder);
+        }
+        let mut milestone = plan.milestones.get(index).ok_or(Error::MilestoneNotFound)?;
+        if milestone.status != MilestoneStatus::Delivered {
+            return Err(Error::InvalidStatus);
+        }
+        let is_final = index.checked_add(1).ok_or(Error::Overflow)? == plan.milestones.len();
+        if (is_final && (rating == 0 || rating > 5)) || (!is_final && rating != 0) {
+            return Err(Error::InvalidMilestoneRating);
+        }
+
+        let token_id = read_token(&env)?;
+        let escrow = env.current_contract_address();
+        token::Client::new(&env, &token_id).transfer(
+            &escrow,
+            &MuxedAddress::from(&job.agent_owner),
+            &milestone.amount,
+        );
+
+        milestone.status = MilestoneStatus::Released;
+        milestone.closed_ledger = env.ledger().sequence();
+        plan.released_amount = plan
+            .released_amount
+            .checked_add(milestone.amount)
+            .ok_or(Error::Overflow)?;
+        plan.current_index = plan.current_index.checked_add(1).ok_or(Error::Overflow)?;
+        plan.milestones.set(index, milestone.clone());
+
+        if is_final {
+            job.status = JobStatus::Released;
+            job.rating = rating;
+            job.closed_ledger = milestone.closed_ledger;
+            let mut agent = read_agent(&env, job.agent_id)?;
+            agent.jobs_completed = agent.jobs_completed.checked_add(1).ok_or(Error::Overflow)?;
+            agent.rating_total = agent
+                .rating_total
+                .checked_add(rating)
+                .ok_or(Error::Overflow)?;
+            agent.rating_count = agent.rating_count.checked_add(1).ok_or(Error::Overflow)?;
+            agent.earned = agent
+                .earned
+                .checked_add(job.amount)
+                .ok_or(Error::Overflow)?;
+            env.storage()
+                .instance()
+                .set(&DataKey::Agent(job.agent_id), &agent);
+        }
+
+        env.storage()
+            .instance()
+            .set(&DataKey::MilestonePlan(job_id), &plan);
+        env.storage().instance().set(&DataKey::Job(job_id), &job);
+        bump_ttl(&env);
+        MilestoneEvent {
+            action: symbol_short!("release"),
+            job_id,
+            index,
+            amount: milestone.amount,
+        }
+        .publish(&env);
+
+        Ok(plan)
+    }
+
+    pub fn refund_milestone_job(
+        env: Env,
+        payer: Address,
+        job_id: u64,
+    ) -> Result<MilestonePlan, Error> {
+        ensure_initialized(&env)?;
+        payer.require_auth();
+
+        let mut job = read_job(&env, job_id)?;
+        if job.payer != payer {
+            return Err(Error::Unauthorized);
+        }
+        if job.status != JobStatus::Funded {
+            return Err(Error::InvalidStatus);
+        }
+        let mut plan = read_milestone_plan(&env, job_id)?;
+        let current = plan
+            .milestones
+            .get(plan.current_index)
+            .ok_or(Error::MilestoneNotFound)?;
+        if current.status != MilestoneStatus::Funded {
+            return Err(Error::InvalidStatus);
+        }
+        if env.ledger().sequence() <= current.deadline_ledger {
+            return Err(Error::DeadlineNotReached);
+        }
+
+        let remainder = job
+            .amount
+            .checked_sub(plan.released_amount)
+            .ok_or(Error::Overflow)?;
+        if remainder <= 0 {
+            return Err(Error::InvalidAmount);
+        }
+        let token_id = read_token(&env)?;
+        let escrow = env.current_contract_address();
+        token::Client::new(&env, &token_id).transfer(
+            &escrow,
+            &MuxedAddress::from(&job.payer),
+            &remainder,
+        );
+
+        let closed_ledger = env.ledger().sequence();
+        let mut cursor = plan.current_index;
+        while cursor < plan.milestones.len() {
+            let mut milestone = plan
+                .milestones
+                .get(cursor)
+                .ok_or(Error::MilestoneNotFound)?;
+            milestone.status = MilestoneStatus::Refunded;
+            milestone.closed_ledger = closed_ledger;
+            plan.milestones.set(cursor, milestone);
+            cursor += 1;
+        }
+        job.status = JobStatus::Refunded;
+        job.closed_ledger = closed_ledger;
+        env.storage()
+            .instance()
+            .set(&DataKey::MilestonePlan(job_id), &plan);
+        env.storage().instance().set(&DataKey::Job(job_id), &job);
+        bump_ttl(&env);
+        MilestoneEvent {
+            action: symbol_short!("refund"),
+            job_id,
+            index: plan.current_index,
+            amount: remainder,
+        }
+        .publish(&env);
+
+        Ok(plan)
+    }
+
     pub fn dispute_job(env: Env, payer: Address, job_id: u64) -> Result<Job, Error> {
         ensure_initialized(&env)?;
         payer.require_auth();
 
         let mut job = read_job(&env, job_id)?;
+        ensure_legacy_job(&env, job_id)?;
         if job.payer != payer {
             return Err(Error::Unauthorized);
         }
@@ -414,6 +776,7 @@ impl AgentRailContract {
         payer.require_auth();
 
         let mut job = read_job(&env, job_id)?;
+        ensure_legacy_job(&env, job_id)?;
         if job.payer != payer {
             return Err(Error::Unauthorized);
         }
@@ -458,6 +821,7 @@ impl AgentRailContract {
         }
 
         let mut job = read_job(&env, job_id)?;
+        ensure_legacy_job(&env, job_id)?;
         if job.status != JobStatus::Disputed {
             return Err(Error::InvalidStatus);
         }
@@ -512,6 +876,20 @@ impl AgentRailContract {
 
     pub fn get_job(env: Env, job_id: u64) -> Result<Job, Error> {
         read_job(&env, job_id)
+    }
+
+    pub fn get_milestone_plan(env: Env, job_id: u64) -> Result<MilestonePlan, Error> {
+        read_milestone_plan(&env, job_id)
+    }
+
+    pub fn list_milestone_plans(env: Env) -> Result<Vec<MilestonePlan>, Error> {
+        ensure_initialized(&env)?;
+        let ids = read_milestone_job_ids(&env);
+        let mut plans = Vec::<MilestonePlan>::new(&env);
+        for id in ids.iter() {
+            plans.push_back(read_milestone_plan(&env, id)?);
+        }
+        Ok(plans)
     }
 
     pub fn list_agents(env: Env) -> Result<Vec<Agent>, Error> {
@@ -607,6 +985,25 @@ fn read_job(env: &Env, id: u64) -> Result<Job, Error> {
         .ok_or(Error::JobNotFound)
 }
 
+fn read_milestone_plan(env: &Env, job_id: u64) -> Result<MilestonePlan, Error> {
+    env.storage()
+        .instance()
+        .get(&DataKey::MilestonePlan(job_id))
+        .ok_or(Error::MilestoneNotFound)
+}
+
+fn ensure_legacy_job(env: &Env, job_id: u64) -> Result<(), Error> {
+    if env
+        .storage()
+        .instance()
+        .has(&DataKey::MilestonePlan(job_id))
+    {
+        Err(Error::MilestoneFlowRequired)
+    } else {
+        Ok(())
+    }
+}
+
 fn read_agent_ids(env: &Env) -> Result<Vec<u64>, Error> {
     env.storage()
         .instance()
@@ -619,6 +1016,13 @@ fn read_job_ids(env: &Env) -> Result<Vec<u64>, Error> {
         .instance()
         .get(&DataKey::JobIds)
         .ok_or(Error::NotInitialized)
+}
+
+fn read_milestone_job_ids(env: &Env) -> Vec<u64> {
+    env.storage()
+        .instance()
+        .get(&DataKey::MilestoneJobIds)
+        .unwrap_or(Vec::<u64>::new(env))
 }
 
 fn next_u64(env: &Env, key: DataKey) -> Result<u64, Error> {

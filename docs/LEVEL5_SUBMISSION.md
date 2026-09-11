@@ -38,7 +38,28 @@ No secret keys were written to disk. Run `npm run evidence:testnet-cohort` to
 repeat the test. This proves 50+ account-scale contract activity, not 50+
 independent human users.
 
-## Major v0.4 product iteration
+## Major v0.5 product iteration
+
+The September reviewer feedback said the August commits still looked like small
+fixes. AgentRail v0.5 responds with a core protocol and product-model change:
+
+- 2–8 sequential deliverables per funded mission;
+- partial escrow release after each buyer approval;
+- per-stage SHA-256 brief and delivery proofs;
+- final-stage reputation settlement;
+- refund of only the unreleased, undelivered balance after expiry;
+- a dedicated Milestone Escrow workspace, builder, timeline, analytics, and
+  wallet-role actions;
+- 11 Soroban tests and 11 frontend/unit tests.
+
+The optimized v0.3 WASM is 23,542 bytes with 24 exported functions. Source,
+tests, and production frontend build are verified locally. The feature commit
+is prepared as `b7ff6a5`; its public URL must be added after push. Testnet
+deployment remains pending because this execution environment could not reach
+Stellar RPC. Do not present this section as public deployment evidence until
+the commit and lifecycle hashes are public.
+
+## Major v0.4 growth iteration
 
 The August reviewer feedback said the repository showed no substantial product
 change beyond CI/CD. AgentRail v0.4 answers that feedback with a new **Growth
@@ -90,7 +111,9 @@ Recruit at least 50 independent people. Each participant should:
 
 Meaningful contract actions include agent registration, job creation and
 funding, delivery proof, payment release, refund, dispute, or dispute
-resolution. A wallet connection alone is not a transaction.
+resolution. v0.5 also accepts milestone mission creation, milestone delivery,
+partial milestone approval, and remaining-balance refund. A wallet connection
+alone is not a transaction.
 
 ## Excel export and verification
 
@@ -162,6 +185,9 @@ environment variables, private deliverables, and participant emails off-screen.
 - [x] 51 unique automated Testnet accounts verified
 - [x] 51 unique successful AgentRail contract transactions verified
 - [x] Updated README and documentation
+- [x] Major milestone protocol and workspace implemented and locally verified
+- [ ] v0.3 milestone contract deployed with public lifecycle hashes
+- [ ] Major v0.5 prepared commits pushed and linked publicly
 - [ ] 50 independent participants verified
 - [ ] 50 successful participant transactions verified
 - [ ] Aggregate active-usage evidence captured without private emails

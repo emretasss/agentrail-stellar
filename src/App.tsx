@@ -30,12 +30,17 @@ import { NetworkExplorer } from "@/components/network-explorer";
 import { ReputationLab } from "@/components/reputation-lab";
 import { TreasuryConsole } from "@/components/treasury-console";
 import { MissionPlaybooks } from "@/components/mission-playbooks";
+import {
+  MilestoneStudio,
+  type CreateMilestoneMission,
+} from "@/components/milestone-studio";
 import type { MissionPlaybook } from "@/data/mission-playbooks";
 import {
   initialActivity,
   initialRegisterForm,
   sampleAgents,
   sampleJobs,
+  sampleMilestonePlans,
 } from "@/data/demo";
 import { captureProductError } from "@/lib/monitoring";
 import {
@@ -60,6 +65,7 @@ import type {
   ActivityEvent,
   Agent,
   Job,
+  MilestonePlan,
   RegisterForm,
   TransactionStage,
 } from "@/types/agentrail";
@@ -85,6 +91,9 @@ function App() {
   );
   const [jobs, setJobs] = useState<Job[]>(
     stellarConfig.demoMode ? sampleJobs : [],
+  );
+  const [milestonePlans, setMilestonePlans] = useState<MilestonePlan[]>(
+    stellarConfig.demoMode ? sampleMilestonePlans : [],
   );
   const [activity, setActivity] = useState<ActivityEvent[]>(initialActivity);
   const [selectedAgentId, setSelectedAgentId] = useState(
@@ -171,6 +180,7 @@ function App() {
       const snapshot = await loadProtocolSnapshot();
       setAgents(snapshot.agents);
       setJobs(snapshot.jobs);
+      setMilestonePlans(snapshot.milestonePlans);
       setLatestLedger(snapshot.ledger);
       setDataMode("live");
       setSelectedAgentId((current) => {
@@ -189,6 +199,7 @@ function App() {
       if (stellarConfig.demoMode) {
         setAgents(sampleAgents);
         setJobs(sampleJobs);
+        setMilestonePlans(sampleMilestonePlans);
         setSelectedAgentId(sampleAgents[0].id);
         setDataMode("demo");
       } else {
@@ -429,6 +440,274 @@ function App() {
       captureProductError(error, { flow: "create_job" });
       pushActivity("Escrow funding failed", message, "error");
       toast.error("Could not fund escrow", { description: message });
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function handleCreateMilestoneMission(mission: CreateMilestoneMission) {
+    setBusy("milestone-create");
+    resetTransaction();
+    try {
+      const signer = requireWallet();
+      const agent = agents.find(({ id }) => id === mission.agentId);
+      if (!agent) throw new Error("Choose a verified agent.");
+      if (!agent.chainBacked) {
+        throw new Error("Preview agents cannot receive real staged escrow.");
+      }
+      if (mission.brief.trim().length < 20) {
+        throw new Error("Mission brief must contain at least 20 characters.");
+      }
+      if (mission.milestones.length < 2 || mission.milestones.length > 8) {
+        throw new Error("A staged mission requires between 2 and 8 milestones.");
+      }
+
+      const currentLedger = await getLatestLedgerSequence();
+      let previousOffset = 0;
+      const preparedMilestones = await Promise.all(
+        mission.milestones.map(async (milestone) => {
+          const ledgerOffset = Number(milestone.ledgerOffset);
+          if (
+            !Number.isInteger(ledgerOffset) ||
+            ledgerOffset < 100 ||
+            ledgerOffset > 120_960 ||
+            ledgerOffset <= previousOffset
+          ) {
+            throw new Error(
+              "Milestone deadline offsets must increase and stay between 100 and 120,960 ledgers.",
+            );
+          }
+          previousOffset = ledgerOffset;
+          const amountStroops = stroopsFromDecimal(milestone.amount);
+          if (amountStroops <= 0n) throw new Error("Every milestone needs a positive amount.");
+          return {
+            ...milestone,
+            amountStroops,
+            briefHash: await sha256Hex(milestone.title.trim()),
+            deadlineLedger: currentLedger + ledgerOffset,
+          };
+        }),
+      );
+      const total = preparedMilestones.reduce(
+        (sum, milestone) => sum + milestone.amountStroops,
+        0n,
+      );
+      if (total < agent.priceStroops) {
+        throw new Error(
+          `Combined milestone budget must be at least ${decimalFromStroops(agent.priceStroops)} XLM.`,
+        );
+      }
+      const briefHash = await sha256Hex(mission.brief.trim());
+      const result = await submitAgentRailCall(
+        signer.address,
+        "create_milestone_job",
+        [
+          scVal.address(signer.address),
+          scVal.u64(agent.id),
+          scVal.bytes32(briefHash),
+          scVal.milestoneInputs(preparedMilestones),
+        ],
+        setTransactionStage,
+      );
+      const id =
+        typeof result.returnValue === "bigint"
+          ? Number(result.returnValue)
+          : Math.max(0, ...jobs.map((job) => job.id)) + 1;
+      const job: Job = {
+        id,
+        agentId: agent.id,
+        payer: signer.address,
+        agentOwner: agent.owner,
+        amountStroops: total,
+        status: "Funded",
+        brief: mission.brief.trim(),
+        briefHash,
+        txHash: result.hash,
+        createdAt: new Date().toISOString(),
+        createdLedger: currentLedger,
+        deadlineLedger: preparedMilestones.at(-1)?.deadlineLedger,
+        chainBacked: true,
+      };
+      const plan: MilestonePlan = {
+        jobId: id,
+        currentIndex: 0,
+        releasedAmountStroops: 0n,
+        chainBacked: true,
+        milestones: preparedMilestones.map((milestone, index) => ({
+          index,
+          briefHash: milestone.briefHash,
+          amountStroops: milestone.amountStroops,
+          deadlineLedger: milestone.deadlineLedger,
+          status: "Funded",
+        })),
+      };
+      setJobs((current) => [job, ...current]);
+      setMilestonePlans((current) => [plan, ...current]);
+      recordWalletTransaction(signer.address, result.hash, "create_milestone_job");
+      pushActivity(
+        "Staged escrow funded",
+        `${mission.milestones.length} milestones · ${decimalFromStroops(total)} XLM protected.`,
+        "success",
+        result.hash,
+      );
+      trackEvent("milestone_mission_created", {
+        jobId: id,
+        milestoneCount: mission.milestones.length,
+      });
+      toast.success("Milestone mission funded on Testnet");
+      await refreshProtocol();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Staged escrow creation failed.";
+      captureProductError(error, { flow: "create_milestone_job" });
+      pushActivity("Staged escrow failed", message, "error");
+      toast.error("Could not create milestone mission", { description: message });
+      throw error;
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function handleDeliverMilestone(plan: MilestonePlan, proof: string) {
+    const milestone = plan.milestones[plan.currentIndex];
+    if (!milestone) return;
+    setBusy(`milestone-deliver-${plan.jobId}`);
+    resetTransaction();
+    try {
+      const signer = requireWallet();
+      const deliverableHash = await sha256Hex(proof.trim());
+      const result = await submitAgentRailCall(
+        signer.address,
+        "deliver_milestone",
+        [
+          scVal.address(signer.address),
+          scVal.u64(plan.jobId),
+          scVal.u32(milestone.index),
+          scVal.bytes32(deliverableHash),
+        ],
+        setTransactionStage,
+      );
+      recordWalletTransaction(signer.address, result.hash, "deliver_milestone");
+      setMilestonePlans((current) =>
+        current.map((item) =>
+          item.jobId === plan.jobId
+            ? {
+                ...item,
+                milestones: item.milestones.map((entry) =>
+                  entry.index === milestone.index
+                    ? { ...entry, status: "Delivered", deliverableHash }
+                    : entry,
+                ),
+              }
+            : item,
+        ),
+      );
+      pushActivity(
+        "Milestone delivered",
+        `Mission #${plan.jobId} · stage ${milestone.index + 1} is ready for approval.`,
+        "success",
+        result.hash,
+      );
+      toast.success("Milestone proof recorded");
+      await refreshProtocol();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Milestone delivery failed.";
+      captureProductError(error, { flow: "deliver_milestone", jobId: plan.jobId });
+      toast.error("Could not deliver milestone", { description: message });
+      throw error;
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function handleApproveMilestone(plan: MilestonePlan, finalRating: number) {
+    const milestone = plan.milestones[plan.currentIndex];
+    if (!milestone) return;
+    setBusy(`milestone-approve-${plan.jobId}`);
+    resetTransaction();
+    try {
+      const signer = requireWallet();
+      const result = await submitAgentRailCall(
+        signer.address,
+        "approve_milestone",
+        [
+          scVal.address(signer.address),
+          scVal.u64(plan.jobId),
+          scVal.u32(milestone.index),
+          scVal.u32(finalRating),
+        ],
+        setTransactionStage,
+      );
+      recordWalletTransaction(signer.address, result.hash, "approve_milestone");
+      const isFinal = milestone.index === plan.milestones.length - 1;
+      setMilestonePlans((current) =>
+        current.map((item) =>
+          item.jobId === plan.jobId
+            ? {
+                ...item,
+                currentIndex: item.currentIndex + 1,
+                releasedAmountStroops:
+                  item.releasedAmountStroops + milestone.amountStroops,
+                milestones: item.milestones.map((entry) =>
+                  entry.index === milestone.index
+                    ? { ...entry, status: "Released" }
+                    : entry,
+                ),
+              }
+            : item,
+        ),
+      );
+      if (isFinal) {
+        setJobs((current) =>
+          current.map((job) =>
+            job.id === plan.jobId
+              ? { ...job, status: "Released", rating: finalRating, txHash: result.hash }
+              : job,
+          ),
+        );
+      }
+      pushActivity(
+        isFinal ? "Mission settled" : "Milestone payment released",
+        `Mission #${plan.jobId} · ${decimalFromStroops(milestone.amountStroops)} XLM released.`,
+        "success",
+        result.hash,
+      );
+      toast.success(isFinal ? "Milestone mission completed" : "Milestone payment released");
+      await refreshProtocol();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Milestone approval failed.";
+      captureProductError(error, { flow: "approve_milestone", jobId: plan.jobId });
+      toast.error("Could not approve milestone", { description: message });
+      throw error;
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function handleRefundMilestone(plan: MilestonePlan) {
+    setBusy(`milestone-refund-${plan.jobId}`);
+    resetTransaction();
+    try {
+      const signer = requireWallet();
+      const result = await submitAgentRailCall(
+        signer.address,
+        "refund_milestone_job",
+        [scVal.address(signer.address), scVal.u64(plan.jobId)],
+        setTransactionStage,
+      );
+      recordWalletTransaction(signer.address, result.hash, "refund_milestone_job");
+      pushActivity(
+        "Remaining escrow refunded",
+        `Mission #${plan.jobId} returned every unreleased milestone to the buyer.`,
+        "success",
+        result.hash,
+      );
+      toast.success("Remaining milestone balance refunded");
+      await refreshProtocol();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Milestone refund failed.";
+      captureProductError(error, { flow: "refund_milestone_job", jobId: plan.jobId });
+      toast.error("Could not refund milestone mission", { description: message });
+      throw error;
     } finally {
       setBusy(null);
     }
@@ -809,6 +1088,27 @@ function App() {
               />
             )}
 
+            {activeView === "milestones" && (
+              <MilestoneStudio
+                agents={agents}
+                jobs={
+                  milestonePlans.length
+                    ? jobs
+                    : [...jobs, ...sampleJobs.filter(({ id }) => id === 15)]
+                }
+                plans={
+                  milestonePlans.length ? milestonePlans : sampleMilestonePlans
+                }
+                walletAddress={wallet?.address}
+                latestLedger={latestLedger}
+                busy={busy}
+                onCreate={handleCreateMilestoneMission}
+                onDeliver={handleDeliverMilestone}
+                onApprove={handleApproveMilestone}
+                onRefund={handleRefundMilestone}
+              />
+            )}
+
             {activeView === "copilot" && (
               <MissionCopilot
                 onUsePlan={useMissionPlan}
@@ -851,7 +1151,7 @@ function App() {
         <footer
           className="mt-8 flex flex-col gap-3 border-t border-white/[.055] py-5 text-[10px] text-slate-700 sm:flex-row sm:items-center sm:justify-between"
         >
-          <span>AgentRail v0.4 · Growth Lab · Stellar Testnet · Non-custodial escrow</span>
+          <span>AgentRail v0.5 · Milestone Protocol · Stellar Testnet · Non-custodial escrow</span>
           <Button variant="ghost" size="sm" onClick={() => setFeedbackOpen(true)}>
             <MessageSquareText size={13} />
             Share feedback

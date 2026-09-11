@@ -637,6 +637,18 @@
                       "key": {
                         "vec": [
                           {
+                            "symbol": "MilestoneJobIds"
+                          }
+                        ]
+                      },
+                      "val": {
+                        "vec": []
+                      }
+                    },
+                    {
+                      "key": {
+                        "vec": [
+                          {
                             "symbol": "NextAgentId"
                           }
                         ]

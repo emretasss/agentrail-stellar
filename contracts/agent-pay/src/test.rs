@@ -64,6 +64,27 @@ fn register_default_agent(f: &TestFixture) -> u64 {
     )
 }
 
+fn milestone_inputs(f: &TestFixture) -> Vec<MilestoneInput> {
+    soroban_sdk::vec![
+        &f.env,
+        MilestoneInput {
+            brief_hash: hash(&f.env, 41),
+            amount: 100_000,
+            deadline_ledger: 130,
+        },
+        MilestoneInput {
+            brief_hash: hash(&f.env, 42),
+            amount: 150_000,
+            deadline_ledger: 160,
+        },
+        MilestoneInput {
+            brief_hash: hash(&f.env, 43),
+            amount: 200_000,
+            deadline_ledger: 190,
+        },
+    ]
+}
+
 #[test]
 fn registers_agents_and_lists_protocol_stats() {
     let f = fixture();
@@ -211,4 +232,143 @@ fn rejects_zero_star_ratings() {
         f.client.try_approve_job(&f.payer, &job_id, &0),
         Err(Ok(Error::InvalidRating))
     );
+}
+
+#[test]
+fn releases_milestone_escrow_in_stages_and_finalizes_reputation() {
+    let f = fixture();
+    let agent_id = register_default_agent(&f);
+    let payer_before = f.token.balance(&f.payer);
+    let owner_before = f.token.balance(&f.agent_owner);
+    let job_id = f.client.create_milestone_job(
+        &f.payer,
+        &agent_id,
+        &hash(&f.env, 40),
+        &milestone_inputs(&f),
+    );
+
+    assert_eq!(f.token.balance(&f.contract_id), 450_000);
+    assert_eq!(f.token.balance(&f.payer), payer_before - 450_000);
+
+    f.client
+        .deliver_milestone(&f.agent_owner, &job_id, &0, &hash(&f.env, 51));
+    let first_release = f.client.approve_milestone(&f.payer, &job_id, &0, &0);
+    assert_eq!(first_release.current_index, 1);
+    assert_eq!(first_release.released_amount, 100_000);
+    assert_eq!(f.token.balance(&f.agent_owner), owner_before + 100_000);
+    assert_eq!(f.token.balance(&f.contract_id), 350_000);
+
+    f.client
+        .deliver_milestone(&f.agent_owner, &job_id, &1, &hash(&f.env, 52));
+    f.client.approve_milestone(&f.payer, &job_id, &1, &0);
+    f.client
+        .deliver_milestone(&f.agent_owner, &job_id, &2, &hash(&f.env, 53));
+    let completed = f.client.approve_milestone(&f.payer, &job_id, &2, &5);
+
+    assert_eq!(completed.current_index, 3);
+    assert_eq!(completed.released_amount, 450_000);
+    assert_eq!(f.client.get_job(&job_id).status, JobStatus::Released);
+    assert_eq!(f.token.balance(&f.contract_id), 0);
+    assert_eq!(f.token.balance(&f.agent_owner), owner_before + 450_000);
+    let agent = f.client.get_agent(&agent_id);
+    assert_eq!(agent.jobs_completed, 1);
+    assert_eq!(agent.rating_total, 5);
+    assert_eq!(agent.earned, 450_000);
+}
+
+#[test]
+fn enforces_sequential_milestone_delivery_and_rating_rules() {
+    let f = fixture();
+    let agent_id = register_default_agent(&f);
+    let job_id = f.client.create_milestone_job(
+        &f.payer,
+        &agent_id,
+        &hash(&f.env, 60),
+        &milestone_inputs(&f),
+    );
+
+    assert_eq!(
+        f.client
+            .try_deliver_milestone(&f.agent_owner, &job_id, &1, &hash(&f.env, 61)),
+        Err(Ok(Error::MilestoneOutOfOrder))
+    );
+    f.client
+        .deliver_milestone(&f.agent_owner, &job_id, &0, &hash(&f.env, 62));
+    f.env.ledger().set_sequence_number(131);
+    assert_eq!(
+        f.client.try_refund_milestone_job(&f.payer, &job_id),
+        Err(Ok(Error::InvalidStatus))
+    );
+    assert_eq!(
+        f.client.try_approve_milestone(&f.payer, &job_id, &0, &5),
+        Err(Ok(Error::InvalidMilestoneRating))
+    );
+}
+
+#[test]
+fn refunds_only_unreleased_milestone_balance_after_current_deadline() {
+    let f = fixture();
+    let agent_id = register_default_agent(&f);
+    let payer_before = f.token.balance(&f.payer);
+    let job_id = f.client.create_milestone_job(
+        &f.payer,
+        &agent_id,
+        &hash(&f.env, 70),
+        &milestone_inputs(&f),
+    );
+    f.client
+        .deliver_milestone(&f.agent_owner, &job_id, &0, &hash(&f.env, 71));
+    f.client.approve_milestone(&f.payer, &job_id, &0, &0);
+
+    assert_eq!(
+        f.client.try_refund_milestone_job(&f.payer, &job_id),
+        Err(Ok(Error::DeadlineNotReached))
+    );
+    f.env.ledger().set_sequence_number(161);
+    let refunded = f.client.refund_milestone_job(&f.payer, &job_id);
+
+    assert_eq!(refunded.released_amount, 100_000);
+    assert_eq!(
+        refunded.milestones.get(1).unwrap().status,
+        MilestoneStatus::Refunded
+    );
+    assert_eq!(
+        refunded.milestones.get(2).unwrap().status,
+        MilestoneStatus::Refunded
+    );
+    assert_eq!(f.client.get_job(&job_id).status, JobStatus::Refunded);
+    assert_eq!(f.token.balance(&f.contract_id), 0);
+    assert_eq!(f.token.balance(&f.payer), payer_before - 100_000);
+}
+
+#[test]
+fn rejects_invalid_milestone_plans_and_legacy_entrypoints() {
+    let f = fixture();
+    let agent_id = register_default_agent(&f);
+    let too_short = soroban_sdk::vec![
+        &f.env,
+        MilestoneInput {
+            brief_hash: hash(&f.env, 80),
+            amount: 250_000,
+            deadline_ledger: 130,
+        }
+    ];
+    assert_eq!(
+        f.client
+            .try_create_milestone_job(&f.payer, &agent_id, &hash(&f.env, 81), &too_short,),
+        Err(Ok(Error::InvalidMilestoneCount))
+    );
+
+    let job_id = f.client.create_milestone_job(
+        &f.payer,
+        &agent_id,
+        &hash(&f.env, 82),
+        &milestone_inputs(&f),
+    );
+    assert_eq!(
+        f.client
+            .try_deliver_job(&f.agent_owner, &job_id, &hash(&f.env, 83)),
+        Err(Ok(Error::MilestoneFlowRequired))
+    );
+    assert_eq!(f.client.list_milestone_plans().len(), 1);
 }

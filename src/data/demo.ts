@@ -1,4 +1,10 @@
-import type { ActivityEvent, Agent, Job, RegisterForm } from "@/types/agentrail";
+import type {
+  ActivityEvent,
+  Agent,
+  Job,
+  MilestonePlan,
+  RegisterForm,
+} from "@/types/agentrail";
 
 export const sampleAgents: Agent[] = [
   {
@@ -69,6 +75,20 @@ export const sampleAgents: Agent[] = [
 
 export const sampleJobs: Job[] = [
   {
+    id: 15,
+    agentId: 4,
+    payer: "GDEMO...BUYER",
+    agentOwner: "GAGENTLEDGERDEMOADDRESS",
+    amountStroops: 1_200_000n,
+    status: "Funded",
+    brief: "Audit a treasury policy across discovery, risk scoring, and final evidence.",
+    briefHash:
+      "afe5309c1a4c4eaaab36e8106946e22ab5a8c8d88515038e38c8dc6d972c235a",
+    createdAt: "2026-09-08T10:10:00.000Z",
+    deadlineLedger: 5_200_000,
+    chainBacked: false,
+  },
+  {
     id: 14,
     agentId: 2,
     payer: "Rise In demo buyer",
@@ -106,6 +126,43 @@ export const sampleJobs: Job[] = [
       "cd832c5328bb4f5ea125f3bb19c6d5c413503496fc1098f64afdf20315cc14aa",
     createdAt: "2026-07-25T20:42:00.000Z",
     chainBacked: false,
+  },
+];
+
+export const sampleMilestonePlans: MilestonePlan[] = [
+  {
+    jobId: 15,
+    currentIndex: 1,
+    releasedAmountStroops: 300_000n,
+    chainBacked: false,
+    milestones: [
+      {
+        index: 0,
+        briefHash: "10".repeat(32),
+        deliverableHash: "91".repeat(32),
+        amountStroops: 300_000n,
+        deadlineLedger: 5_120_000,
+        status: "Released",
+        deliveredLedger: 5_101_422,
+        closedLedger: 5_101_510,
+      },
+      {
+        index: 1,
+        briefHash: "20".repeat(32),
+        deliverableHash: "92".repeat(32),
+        amountStroops: 400_000n,
+        deadlineLedger: 5_160_000,
+        status: "Delivered",
+        deliveredLedger: 5_144_230,
+      },
+      {
+        index: 2,
+        briefHash: "30".repeat(32),
+        amountStroops: 500_000n,
+        deadlineLedger: 5_200_000,
+        status: "Funded",
+      },
+    ],
   },
 ];
 

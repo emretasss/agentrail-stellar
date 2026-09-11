@@ -42,9 +42,37 @@ export type Job = {
   chainBacked: boolean;
 };
 
+export type MilestoneStatus = "Funded" | "Delivered" | "Released" | "Refunded";
+
+export type Milestone = {
+  index: number;
+  briefHash: string;
+  deliverableHash?: string;
+  amountStroops: bigint;
+  deadlineLedger: number;
+  status: MilestoneStatus;
+  deliveredLedger?: number;
+  closedLedger?: number;
+};
+
+export type MilestonePlan = {
+  jobId: number;
+  currentIndex: number;
+  releasedAmountStroops: bigint;
+  milestones: Milestone[];
+  chainBacked: boolean;
+};
+
+export type MilestoneDraft = {
+  title: string;
+  amount: string;
+  ledgerOffset: string;
+};
+
 export type ProtocolSnapshot = {
   agents: Agent[];
   jobs: Job[];
+  milestonePlans: MilestonePlan[];
   ledger: number;
   loadedAt: string;
 };

@@ -25,18 +25,28 @@ settlement.
 | Item | Current state |
 | --- | --- |
 | Product | Trust, escrow, evidence, and reputation workspace for paid AI-agent work |
-| Release | `v0.4.0` — Growth Lab and expanded Trust OS workspaces |
+| Release | `v0.5.0` — milestone missions and staged Soroban escrow |
 | Network | Stellar Testnet |
 | Frontend | React 19, TypeScript, Vite, Tailwind CSS, Radix UI, Framer Motion |
 | Wallet and chain | Freighter, Stellar SDK, Soroban RPC, Horizon verification |
-| Smart contract | Rust/Soroban escrow, registry, dispute, and reputation contract |
+| Smart contract | Rust/Soroban escrow with single-delivery and 2–8 milestone mission state machines |
 | AI assistance | Server-side Gemini structured mission generation with an explicitly labeled local fallback |
-| Public engineering history | 93 non-merge commits on `main` as of 2026-08-17 |
+| Public engineering history | 93 non-merge commits currently public; two v0.5 commits prepared locally for push |
 | Public activity proof | 6 lifecycle transactions + 51 successful automated cohort invocations |
 | Independent human cohort | **0/50 verified — still required for Level 5 completion** |
 | Live product | [agentrail-stellar.vercel.app](https://agentrail-stellar.vercel.app) |
 
 ## Product screenshots
+
+### Milestone Protocol — major v0.5 product update
+
+The new Milestone Escrow workspace turns complex AI work into 2–8 sequential,
+independently verifiable deliverables. The full budget is locked once, each
+buyer approval releases only that milestone's amount, and an expired untouched
+stage returns only the unreleased balance. The workspace includes a staged
+mission builder, protected/released value analytics, role-aware delivery and
+approval controls, final reputation settlement, and a clearly labeled
+interactive lifecycle preview when no live staged mission exists.
 
 ### Growth Lab — verifiable Testnet onboarding
 
@@ -89,20 +99,23 @@ commercial trust is still weak:
 - Teams need public evidence that a payment and delivery process happened
   without leaking the underlying content.
 
-AgentRail addresses those gaps with four connected layers:
+AgentRail addresses those gaps with six connected layers:
 
 1. **Mission design** — Gemini-powered Mission Copilot converts a rough request
    into deliverables, acceptance criteria, risks, budget guidance, and a Stellar
    ledger deadline.
 2. **Agent discovery** — service identity, ownership, price, completed work, and
    reputation are read from the deployed Soroban contract.
-3. **Non-custodial escrow** — the buyer funds a job; the agent submits a delivery
-   proof; only the buyer can approve release.
-4. **Verifiable reputation** — settlement records a rating on the agent's
+3. **Non-custodial escrow** — the buyer funds either a simple job or a complex
+   2–8 milestone mission.
+4. **Staged settlement** — milestone deliverables clear in order and each buyer
+   approval releases only its assigned XLM slice; untouched expired work can
+   refund only the remaining balance.
+5. **Verifiable reputation** — final settlement records a rating on the agent's
    on-chain profile. Brief and delivery content remain off-chain while their
    SHA-256 proofs provide an immutable audit trail.
 
-Level 5 adds a fifth growth layer: **Growth Lab** turns onboarding into a
+Level 5 adds a sixth growth layer: **Growth Lab** turns onboarding into a
 role-based Testnet quest, verifies submitted transaction hashes directly with
 Horizon, checks that the transaction invoked the deployed AgentRail contract,
 matches the participant wallet, records deduplicated local proof, generates a
@@ -118,6 +131,7 @@ landing page:
 | **Command Center** | Live contract metrics, ledger health, settlement lifecycle, and product explanation |
 | **Agent Network** | Search, compare, inspect, and hire contract-backed agents |
 | **Escrow Operations** | Follow funded, delivered, released, refunded, and disputed jobs |
+| **Milestone Escrow** | Build, monitor, deliver, approve, and recover 2–8 stage missions with partial releases |
 | **Treasury Console** | Trace XLM across protected, released, and recovered value routes |
 | **Reputation Lab** | Inspect explainable, settlement-backed agent trust rankings |
 | **Mission Playbooks** | Start from reusable scope, evidence, and acceptance patterns |
@@ -141,9 +155,13 @@ flowchart LR
     B --> C["Buyer selects an on-chain agent"]
     C --> D["Brief is hashed locally"]
     D --> E["XLM is locked in Soroban escrow"]
-    E --> F["Agent submits a delivery hash"]
-    F --> G["Buyer verifies the off-chain result"]
-    G --> H["Buyer releases payment and rates agent"]
+    E --> F{"Simple or staged?"}
+    F -->|Simple| G["Agent submits one delivery hash"]
+    F -->|Staged| M["Agent submits current milestone proof"]
+    M --> N["Buyer releases only that milestone"]
+    N -->|More stages| M
+    N -->|Final stage| H["Buyer rates the completed mission"]
+    G --> H
     H --> I["Portable reputation updates on Stellar"]
     I --> J["Growth Lab verifies wallet + contract transaction"]
     J --> K["Participant submits feedback and invites next tester"]
@@ -154,6 +172,13 @@ signs Stellar transactions, and Gemini calls run through a Vercel server
 function.
 
 ## Current Testnet deployment
+
+> The public contract below is the existing v0.2 deployment and remains the
+> production fallback. The v0.3 milestone WASM builds locally at 23,542 bytes
+> with 24 exported functions, but a new Testnet deployment was not claimed in
+> this update because the current execution environment could not reach Stellar
+> RPC. Update this table and the Vercel contract variable only after a successful
+> public deployment and lifecycle transaction sequence.
 
 | Item | Value |
 | --- | --- |
@@ -184,17 +209,25 @@ The Soroban contract is located at
 - SEP-41-compatible token escrow
 - Buyer-authorized job funding, approval, rating, refund, and dispute creation
 - Agent-owner-authorized delivery
+- Buyer-authorized creation of 2–8 sequential milestones in one funded mission
+- Per-milestone delivery hashes and partial XLM releases
+- Final-stage rating and atomic reputation completion
+- Safe expiry recovery that refunds only unreleased, undelivered milestones
+- Legacy and milestone entrypoint separation to prevent double settlement
 - Administrator-authorized dispute resolution
 - Checked arithmetic and explicit contract errors
 - Bounded pagination with a maximum page size of 50
 - Typed lifecycle events for indexing
-- Seven unit tests covering success and failure paths
+- Eleven Soroban tests plus eleven frontend/unit tests covering success,
+  validation, sequencing, partial release, refund, and failure paths
 
 Main public functions:
 
 ```text
 register_agent · update_agent · create_job · deliver_job · approve_job
 refund_expired · dispute_job · resolve_dispute · list_agents · list_jobs
+create_milestone_job · deliver_milestone · approve_milestone
+refund_milestone_job · get_milestone_plan · list_milestone_plans
 list_agents_page · list_jobs_page · stats
 ```
 
@@ -285,9 +318,9 @@ counted as a separate user.
 | Requirement | Status | Evidence / next action |
 | --- | --- | --- |
 | Public GitHub repository | **Ready** | [Public repository](https://github.com/emretasss/agentrail-stellar) |
-| 20+ meaningful commits | **Ready** | 93 non-merge commits on `main` as of 2026-08-17; the major product commit is linked below |
+| 20+ meaningful commits | **Ready** | 93 non-merge commits currently public; the major v0.5 feature and docs commits are prepared locally |
 | Live deployed application | **Ready** | [Vercel production](https://agentrail-stellar.vercel.app) |
-| Product stability and UX | **Ready** | v0.4 Growth Lab, responsive workspace, guided role missions, Horizon proof verification, typed transaction states, RPC recovery, seven contract tests, and CI |
+| Product stability and UX | **Ready in source; v0.3 contract deployment pending** | v0.5 milestone workspace, staged plan builder, role-aware partial releases, Growth Lab, Horizon proof verification, typed transaction states, RPC recovery, 11 contract tests, and CI-ready build |
 | Professional pitch deck | **Ready** | [Download the refreshed PPTX](docs/pitch/AgentRail-Level5-Pitch-Deck.pptx); current product screenshots and 57 public Testnet transactions are reflected |
 | Product walkthrough | **Partial** | [Download the 42-second WebM preview](docs/demo/AgentRail-Level5-Demo.webm); the final signed-wallet walkthrough in [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md) is still required |
 | Google Form | **Ready** | [Open the published participant form](https://docs.google.com/forms/d/e/1FAIpQLSfWWZxgMNLxVi7SHGKc9Y-Q66d5Dy4KHZSi72fKTtWPUFhX2A/viewform) |
@@ -346,6 +379,31 @@ Its current verified count is intentionally **0/50** until genuine responses are
 received.
 
 ## Product improvements and feedback loop
+
+### September v0.5 major iteration: Milestone Protocol
+
+The latest reviewer feedback said the August history still looked like a series
+of small fixes rather than a major product change. v0.5 therefore changes the
+core settlement model rather than adding another cosmetic dashboard:
+
+- a new Soroban `MilestonePlan` state machine with 2–8 bounded stages;
+- one-time total funding with individually released escrow slices;
+- strict sequential delivery and approval enforcement;
+- a final-stage rating that updates completed work, earnings, and reputation;
+- expiry recovery limited to the unreleased and still-undelivered balance;
+- dedicated contract events, read APIs, frontend ScVal encoding, and live state
+  hydration;
+- an entirely new Milestone Escrow workspace with mission builder, portfolio
+  analytics, timeline, and role-based actions;
+- four milestone contract scenarios and a frontend ABI-encoding regression
+  test, bringing the verified totals to 11 contract and 11 frontend tests.
+
+The feature commit is prepared locally as `b7ff6a5` and must be pushed before a
+public commit URL is added. The core changes live in
+[`contracts/agent-pay/src/lib.rs`](contracts/agent-pay/src/lib.rs),
+[`src/components/milestone-studio.tsx`](src/components/milestone-studio.tsx),
+and [`src/App.tsx`](src/App.tsx). GitHub publication and the v0.3 Testnet
+deployment remain explicitly pending.
 
 The August reviewer feedback was specific: the public repository did not show a
 substantial product update beyond CI/CD, and a resubmission must be materially
