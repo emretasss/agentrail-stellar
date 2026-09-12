@@ -26,7 +26,10 @@ flowchart TB
     FB --> W["Private feedback collector (optional)"]
     F --> RPC
     RPC --> SC["AgentRail Soroban contract"]
-    SC --> SAC["Native XLM SAC"]
+    SC --> AR["On-chain asset allowlist"]
+    AR --> XLM["Native XLM SAC"]
+    AR --> ISSUED["Issued-asset / contract-token SEP-41 routes"]
+    RPC --> EV["Recent contract event stream"]
 ```
 
 ## Frontend boundaries
@@ -95,6 +98,8 @@ The Soroban contract is authoritative for:
 - escrow custody and release/refund rules;
 - dispute creation and administrator resolution;
 - completed-job counts and reputation totals.
+- the enabled settlement-asset registry and each job's immutable token route;
+- funding pause state and timelocked upgrade proposal state.
 
 Brief and delivery content do not enter contract storage. The contract stores
 32-byte SHA-256 proofs, reducing disclosure and storage cost.
@@ -139,6 +144,37 @@ Owner, payer, and administrator mutations require explicit authorization.
 Arithmetic uses checked operations. Registry reads offer bounded pagination
 with a maximum page size of 50.
 
+### Multi-asset settlement boundary
+
+AgentRail depends only on the SEP-41 transfer interface. Native XLM, issued
+Stellar assets exposed through their Stellar Asset Contract, and compatible
+contract tokens can therefore use the same escrow state machine. An asset must
+first be registered by the protocol administrator; jobs persist the selected
+token address and all release, dispute, and refund paths resolve that immutable
+route instead of a mutable global default. Legacy jobs fall back to the original
+XLM token key.
+
+The browser currently enables seven-decimal routes, matching Stellar asset
+precision. The contract records metadata for up to 18 decimals so later clients
+can support other SEP-41 implementations without a storage migration.
+
+### Protocol safety plane
+
+The circuit breaker blocks only new funding. Existing obligations retain their
+delivery, approval, dispute resolution, and refund exits so an emergency action
+cannot strand user funds. Contract upgrades require administrator authorization,
+an uploaded WASM hash, and a minimum 17,280-ledger delay. The proposal is public
+contract state, can be cancelled before execution, and is exposed in Network
+Explorer for reviewer visibility.
+
+### Event data plane
+
+Network Explorer calls Stellar RPC `getEvents` with a contract-address filter
+over a recent ledger window. It decodes event topics and values, deduplicates by
+RPC event identifier, and links every displayed transition to its transaction.
+This is an operational view, not permanent indexing: RPC history is bounded, so
+production analytics still require durable ingestion.
+
 ## Data and evidence
 
 Stellar RPC is the primary source for current agents, jobs, ledger sequence,
@@ -158,7 +194,7 @@ If `FEEDBACK_WEBHOOK_URL` is configured, the server forwards feedback to a
 private research collector. Production scale requires a durable database and
 retention/consent policy.
 
-For Level 5 cohort validation, a published Google Form collects the participant
+For external cohort validation, a published Google Form collects the participant
 name, email, public Testnet wallet, successful transaction hash, product rating,
 qualitative feedback, and explicit evidence consent. Responses flow to a linked
 Google Sheet and are exported into the repository's Excel evidence workbook for
@@ -187,14 +223,16 @@ records and must not appear in public screenshots or narrative summaries.
 | Gemini unavailable | Generate and label a local scope template |
 | Feedback collector unavailable | Preserve local evidence and export |
 | Demo data enabled | Prevent all real escrow actions against sample identifiers |
-| Milestone method absent on an older deployment | Load legacy agents/jobs and show the labeled staged-lifecycle preview |
+| New ABI method absent on an older deployment | Fall back to legacy jobs/XLM metadata and label unavailable live state |
+| Funding circuit breaker active | Reject new deposits while preserving settlement and refund exits |
+| Event outside RPC retention | Keep current state available and show an empty recent-event window |
 
 ## Scale path
 
-1. Deploy v0.3 to Testnet, run a public three-stage lifecycle, and update the production contract ID.
-2. Index typed contract events for cross-device history and search.
+1. Deploy v0.6 to Testnet, register the XLM and testnet USDC SAC routes, run public lifecycles, and update the production contract ID.
+2. Persist the implemented RPC event stream for cross-device history and search.
 3. Replace the optional feedback webhook with a durable consented store.
 4. Add cache/retry policy for high-volume contract reads.
 5. Add Stellar Wallets Kit for multi-wallet onboarding.
-6. Add stablecoin escrow and separate x402/MPP modes for per-request agent APIs.
+6. Add separate x402/MPP modes for per-request agent APIs.
 7. Perform independent contract and application security review before Mainnet.

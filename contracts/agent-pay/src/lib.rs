@@ -1,4 +1,5 @@
 #![no_std]
+#![allow(clippy::too_many_arguments)]
 
 use soroban_sdk::{
     contract, contracterror, contractevent, contractimpl, contractmeta, contracttype, symbol_short,
@@ -10,10 +11,12 @@ const INSTANCE_TTL_BUMP: u32 = 518_400;
 const MAX_PAGE_SIZE: u32 = 50;
 
 contractmeta!(key = "name", val = "AgentRail Escrow");
-contractmeta!(key = "version", val = "0.3.0");
+contractmeta!(key = "version", val = "0.6.0");
 
 const MIN_MILESTONES: u32 = 2;
 const MAX_MILESTONES: u32 = 8;
+const MAX_TOKEN_DECIMALS: u32 = 18;
+const MIN_UPGRADE_DELAY_LEDGERS: u32 = 17_280;
 
 #[contracttype]
 #[derive(Clone)]
@@ -28,6 +31,11 @@ pub enum DataKey {
     Job(u64),
     MilestoneJobIds,
     MilestonePlan(u64),
+    AssetIds,
+    Asset(Address),
+    JobAsset(u64),
+    Paused,
+    PendingUpgrade,
 }
 
 #[contracttype]
@@ -124,6 +132,41 @@ pub struct ProtocolStats {
     pub token: Address,
 }
 
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct SettlementAsset {
+    pub token: Address,
+    pub code: String,
+    pub decimals: u32,
+    pub enabled: bool,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct JobSettlement {
+    pub job_id: u64,
+    pub token: Address,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct UpgradeProposal {
+    pub wasm_hash: BytesN<32>,
+    pub proposed_ledger: u32,
+    pub execute_after_ledger: u32,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ProtocolGovernance {
+    pub paused: bool,
+    pub version: u32,
+    pub min_upgrade_delay_ledgers: u32,
+    pub upgrade_pending: bool,
+    pub upgrade_wasm_hash: BytesN<32>,
+    pub upgrade_execute_after_ledger: u32,
+}
+
 #[contractevent(topics = ["agent"])]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct AgentEvent {
@@ -150,6 +193,22 @@ pub struct MilestoneEvent {
     pub amount: i128,
 }
 
+#[contractevent(topics = ["asset"])]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct AssetEvent {
+    #[topic]
+    pub action: Symbol,
+    pub token: Address,
+}
+
+#[contractevent(topics = ["govern"])]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct GovernanceEvent {
+    #[topic]
+    pub action: Symbol,
+    pub execute_after_ledger: u32,
+}
+
 #[contracterror]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
 #[repr(u32)]
@@ -173,6 +232,12 @@ pub enum Error {
     MilestoneOutOfOrder = 17,
     InvalidMilestoneRating = 18,
     MilestoneFlowRequired = 19,
+    AssetNotSupported = 20,
+    InvalidAsset = 21,
+    ProtocolPaused = 22,
+    UpgradeNotFound = 23,
+    UpgradeNotReady = 24,
+    InvalidUpgradeDelay = 25,
 }
 
 #[contract]
@@ -198,6 +263,19 @@ impl AgentRailContract {
         env.storage()
             .instance()
             .set(&DataKey::MilestoneJobIds, &Vec::<u64>::new(&env));
+        let default_asset = SettlementAsset {
+            token: token.clone(),
+            code: String::from_str(&env, "XLM"),
+            decimals: 7,
+            enabled: true,
+        };
+        env.storage()
+            .instance()
+            .set(&DataKey::Asset(token.clone()), &default_asset);
+        env.storage()
+            .instance()
+            .set(&DataKey::AssetIds, &soroban_sdk::vec![&env, token]);
+        env.storage().instance().set(&DataKey::Paused, &false);
         bump_ttl(&env);
     }
 
@@ -207,6 +285,175 @@ impl AgentRailContract {
 
     pub fn token(env: Env) -> Result<Address, Error> {
         read_token(&env)
+    }
+
+    pub fn governance(env: Env) -> Result<ProtocolGovernance, Error> {
+        ensure_initialized(&env)?;
+        let pending: Option<UpgradeProposal> =
+            env.storage().instance().get(&DataKey::PendingUpgrade);
+        Ok(ProtocolGovernance {
+            paused: read_paused(&env),
+            version: 6,
+            min_upgrade_delay_ledgers: MIN_UPGRADE_DELAY_LEDGERS,
+            upgrade_pending: pending.is_some(),
+            upgrade_wasm_hash: pending
+                .as_ref()
+                .map(|proposal| proposal.wasm_hash.clone())
+                .unwrap_or(BytesN::from_array(&env, &[0; 32])),
+            upgrade_execute_after_ledger: pending
+                .map(|proposal| proposal.execute_after_ledger)
+                .unwrap_or(0),
+        })
+    }
+
+    pub fn configure_asset(
+        env: Env,
+        admin: Address,
+        token: Address,
+        code: String,
+        decimals: u32,
+        enabled: bool,
+    ) -> Result<SettlementAsset, Error> {
+        require_admin(&env, &admin)?;
+        if code.is_empty() || decimals > MAX_TOKEN_DECIMALS {
+            return Err(Error::InvalidAsset);
+        }
+
+        let asset = SettlementAsset {
+            token: token.clone(),
+            code,
+            decimals,
+            enabled,
+        };
+        if !env.storage().instance().has(&DataKey::Asset(token.clone())) {
+            let mut ids = read_asset_ids(&env);
+            ids.push_back(token.clone());
+            env.storage().instance().set(&DataKey::AssetIds, &ids);
+        }
+        env.storage()
+            .instance()
+            .set(&DataKey::Asset(token.clone()), &asset);
+        bump_ttl(&env);
+        AssetEvent {
+            action: symbol_short!("config"),
+            token,
+        }
+        .publish(&env);
+        Ok(asset)
+    }
+
+    pub fn list_assets(env: Env) -> Result<Vec<SettlementAsset>, Error> {
+        ensure_initialized(&env)?;
+        let mut assets = Vec::<SettlementAsset>::new(&env);
+        for token in read_asset_ids(&env).iter() {
+            if let Some(asset) = env.storage().instance().get(&DataKey::Asset(token)) {
+                assets.push_back(asset);
+            }
+        }
+        Ok(assets)
+    }
+
+    pub fn get_job_asset(env: Env, job_id: u64) -> Result<SettlementAsset, Error> {
+        read_job(&env, job_id)?;
+        read_asset(&env, &read_job_token(&env, job_id)?)
+    }
+
+    pub fn list_job_settlements(env: Env) -> Result<Vec<JobSettlement>, Error> {
+        let mut settlements = Vec::<JobSettlement>::new(&env);
+        for job_id in read_job_ids(&env)?.iter() {
+            settlements.push_back(JobSettlement {
+                job_id,
+                token: read_job_token(&env, job_id)?,
+            });
+        }
+        Ok(settlements)
+    }
+
+    pub fn pause(env: Env, admin: Address) -> Result<(), Error> {
+        require_admin(&env, &admin)?;
+        env.storage().instance().set(&DataKey::Paused, &true);
+        bump_ttl(&env);
+        GovernanceEvent {
+            action: symbol_short!("pause"),
+            execute_after_ledger: 0,
+        }
+        .publish(&env);
+        Ok(())
+    }
+
+    pub fn resume(env: Env, admin: Address) -> Result<(), Error> {
+        require_admin(&env, &admin)?;
+        env.storage().instance().set(&DataKey::Paused, &false);
+        bump_ttl(&env);
+        GovernanceEvent {
+            action: symbol_short!("resume"),
+            execute_after_ledger: 0,
+        }
+        .publish(&env);
+        Ok(())
+    }
+
+    pub fn propose_upgrade(
+        env: Env,
+        admin: Address,
+        wasm_hash: BytesN<32>,
+        execute_after_ledger: u32,
+    ) -> Result<UpgradeProposal, Error> {
+        require_admin(&env, &admin)?;
+        let minimum = env
+            .ledger()
+            .sequence()
+            .checked_add(MIN_UPGRADE_DELAY_LEDGERS)
+            .ok_or(Error::Overflow)?;
+        if execute_after_ledger < minimum {
+            return Err(Error::InvalidUpgradeDelay);
+        }
+        let proposal = UpgradeProposal {
+            wasm_hash,
+            proposed_ledger: env.ledger().sequence(),
+            execute_after_ledger,
+        };
+        env.storage()
+            .instance()
+            .set(&DataKey::PendingUpgrade, &proposal);
+        bump_ttl(&env);
+        GovernanceEvent {
+            action: symbol_short!("propose"),
+            execute_after_ledger,
+        }
+        .publish(&env);
+        Ok(proposal)
+    }
+
+    pub fn cancel_upgrade(env: Env, admin: Address) -> Result<(), Error> {
+        require_admin(&env, &admin)?;
+        if !env.storage().instance().has(&DataKey::PendingUpgrade) {
+            return Err(Error::UpgradeNotFound);
+        }
+        env.storage().instance().remove(&DataKey::PendingUpgrade);
+        bump_ttl(&env);
+        GovernanceEvent {
+            action: symbol_short!("cancel"),
+            execute_after_ledger: 0,
+        }
+        .publish(&env);
+        Ok(())
+    }
+
+    pub fn execute_upgrade(env: Env, admin: Address) -> Result<(), Error> {
+        require_admin(&env, &admin)?;
+        let proposal: UpgradeProposal = env
+            .storage()
+            .instance()
+            .get(&DataKey::PendingUpgrade)
+            .ok_or(Error::UpgradeNotFound)?;
+        if env.ledger().sequence() < proposal.execute_after_ledger {
+            return Err(Error::UpgradeNotReady);
+        }
+        env.storage().instance().remove(&DataKey::PendingUpgrade);
+        env.deployer()
+            .update_current_contract_wasm(proposal.wasm_hash);
+        Ok(())
     }
 
     pub fn stats(env: Env) -> Result<ProtocolStats, Error> {
@@ -317,51 +564,38 @@ impl AgentRailContract {
     ) -> Result<u64, Error> {
         ensure_initialized(&env)?;
         payer.require_auth();
-
-        let agent = read_agent(&env, agent_id)?;
-        if !agent.active {
-            return Err(Error::AgentInactive);
-        }
-        if amount < agent.price || amount <= 0 {
-            return Err(Error::InvalidAmount);
-        }
-        if deadline_ledger <= env.ledger().sequence() {
-            return Err(Error::InvalidDeadline);
-        }
-
         let token_id = read_token(&env)?;
-        let escrow = env.current_contract_address();
-        token::Client::new(&env, &token_id).transfer(&payer, &MuxedAddress::from(&escrow), &amount);
-
-        let id = next_u64(&env, DataKey::NextJobId)?;
-        let job = Job {
-            id,
-            agent_id,
+        create_job_for_asset(
+            &env,
             payer,
-            agent_owner: agent.owner,
+            agent_id,
             brief_hash,
-            deliverable_hash: BytesN::from_array(&env, &[0; 32]),
             amount,
             deadline_ledger,
-            status: JobStatus::Funded,
-            rating: 0,
-            created_ledger: env.ledger().sequence(),
-            delivered_ledger: 0,
-            closed_ledger: 0,
-        };
+            token_id,
+        )
+    }
 
-        env.storage().instance().set(&DataKey::Job(id), &job);
-        let mut ids = read_job_ids(&env)?;
-        ids.push_back(id);
-        env.storage().instance().set(&DataKey::JobIds, &ids);
-        bump_ttl(&env);
-        JobEvent {
-            action: symbol_short!("fund"),
-            job_id: id,
-        }
-        .publish(&env);
-
-        Ok(id)
+    pub fn create_job_with_asset(
+        env: Env,
+        payer: Address,
+        agent_id: u64,
+        brief_hash: BytesN<32>,
+        amount: i128,
+        deadline_ledger: u32,
+        token: Address,
+    ) -> Result<u64, Error> {
+        ensure_initialized(&env)?;
+        payer.require_auth();
+        create_job_for_asset(
+            &env,
+            payer,
+            agent_id,
+            brief_hash,
+            amount,
+            deadline_ledger,
+            token,
+        )
     }
 
     pub fn create_milestone_job(
@@ -373,87 +607,21 @@ impl AgentRailContract {
     ) -> Result<u64, Error> {
         ensure_initialized(&env)?;
         payer.require_auth();
-
-        let agent = read_agent(&env, agent_id)?;
-        if !agent.active {
-            return Err(Error::AgentInactive);
-        }
-        if inputs.len() < MIN_MILESTONES || inputs.len() > MAX_MILESTONES {
-            return Err(Error::InvalidMilestoneCount);
-        }
-
-        let current_ledger = env.ledger().sequence();
-        let mut total = 0i128;
-        let mut previous_deadline = current_ledger;
-        let mut milestones = Vec::<Milestone>::new(&env);
-        for (index, input) in inputs.iter().enumerate() {
-            if input.amount <= 0 || input.deadline_ledger <= previous_deadline {
-                return Err(Error::InvalidMilestone);
-            }
-            total = total.checked_add(input.amount).ok_or(Error::Overflow)?;
-            previous_deadline = input.deadline_ledger;
-            milestones.push_back(Milestone {
-                index: index as u32,
-                brief_hash: input.brief_hash,
-                deliverable_hash: BytesN::from_array(&env, &[0; 32]),
-                amount: input.amount,
-                deadline_ledger: input.deadline_ledger,
-                status: MilestoneStatus::Funded,
-                delivered_ledger: 0,
-                closed_ledger: 0,
-            });
-        }
-        if total < agent.price {
-            return Err(Error::InvalidAmount);
-        }
-
         let token_id = read_token(&env)?;
-        let escrow = env.current_contract_address();
-        token::Client::new(&env, &token_id).transfer(&payer, &MuxedAddress::from(&escrow), &total);
+        create_milestone_job_for_asset(&env, payer, agent_id, brief_hash, inputs, token_id)
+    }
 
-        let id = next_u64(&env, DataKey::NextJobId)?;
-        let job = Job {
-            id,
-            agent_id,
-            payer,
-            agent_owner: agent.owner,
-            brief_hash,
-            deliverable_hash: BytesN::from_array(&env, &[0; 32]),
-            amount: total,
-            deadline_ledger: previous_deadline,
-            status: JobStatus::Funded,
-            rating: 0,
-            created_ledger: current_ledger,
-            delivered_ledger: 0,
-            closed_ledger: 0,
-        };
-        let plan = MilestonePlan {
-            job_id: id,
-            current_index: 0,
-            released_amount: 0,
-            milestones,
-        };
-
-        env.storage().instance().set(&DataKey::Job(id), &job);
-        env.storage()
-            .instance()
-            .set(&DataKey::MilestonePlan(id), &plan);
-        let mut job_ids = read_job_ids(&env)?;
-        job_ids.push_back(id);
-        env.storage().instance().set(&DataKey::JobIds, &job_ids);
-        let mut milestone_ids = read_milestone_job_ids(&env);
-        milestone_ids.push_back(id);
-        env.storage()
-            .instance()
-            .set(&DataKey::MilestoneJobIds, &milestone_ids);
-        bump_ttl(&env);
-        JobEvent {
-            action: symbol_short!("staged"),
-            job_id: id,
-        }
-        .publish(&env);
-
-        Ok(id)
+    pub fn create_milestone_job_with_asset(
+        env: Env,
+        payer: Address,
+        agent_id: u64,
+        brief_hash: BytesN<32>,
+        inputs: Vec<MilestoneInput>,
+        token: Address,
+    ) -> Result<u64, Error> {
+        ensure_initialized(&env)?;
+        payer.require_auth();
+        create_milestone_job_for_asset(&env, payer, agent_id, brief_hash, inputs, token)
     }
 
     pub fn deliver_job(
@@ -505,11 +673,11 @@ impl AgentRailContract {
             return Err(Error::InvalidStatus);
         }
 
-        let token_id = read_token(&env)?;
+        let token_id = read_job_token(&env, job_id)?;
         let escrow = env.current_contract_address();
         token::Client::new(&env, &token_id).transfer(
             &escrow,
-            &MuxedAddress::from(&job.agent_owner),
+            MuxedAddress::from(&job.agent_owner),
             &job.amount,
         );
 
@@ -621,11 +789,11 @@ impl AgentRailContract {
             return Err(Error::InvalidMilestoneRating);
         }
 
-        let token_id = read_token(&env)?;
+        let token_id = read_job_token(&env, job_id)?;
         let escrow = env.current_contract_address();
         token::Client::new(&env, &token_id).transfer(
             &escrow,
-            &MuxedAddress::from(&job.agent_owner),
+            MuxedAddress::from(&job.agent_owner),
             &milestone.amount,
         );
 
@@ -708,11 +876,11 @@ impl AgentRailContract {
         if remainder <= 0 {
             return Err(Error::InvalidAmount);
         }
-        let token_id = read_token(&env)?;
+        let token_id = read_job_token(&env, job_id)?;
         let escrow = env.current_contract_address();
         token::Client::new(&env, &token_id).transfer(
             &escrow,
-            &MuxedAddress::from(&job.payer),
+            MuxedAddress::from(&job.payer),
             &remainder,
         );
 
@@ -787,11 +955,11 @@ impl AgentRailContract {
             return Err(Error::DeadlineNotReached);
         }
 
-        let token_id = read_token(&env)?;
+        let token_id = read_job_token(&env, job_id)?;
         let escrow = env.current_contract_address();
         token::Client::new(&env, &token_id).transfer(
             &escrow,
-            &MuxedAddress::from(&job.payer),
+            MuxedAddress::from(&job.payer),
             &job.amount,
         );
 
@@ -826,7 +994,7 @@ impl AgentRailContract {
             return Err(Error::InvalidStatus);
         }
 
-        let token_id = read_token(&env)?;
+        let token_id = read_job_token(&env, job_id)?;
         let escrow = env.current_contract_address();
         let destination = if release_to_agent {
             job.agent_owner.clone()
@@ -836,7 +1004,7 @@ impl AgentRailContract {
 
         token::Client::new(&env, &token_id).transfer(
             &escrow,
-            &MuxedAddress::from(&destination),
+            MuxedAddress::from(&destination),
             &job.amount,
         );
 
@@ -941,6 +1109,153 @@ impl AgentRailContract {
     }
 }
 
+fn create_job_for_asset(
+    env: &Env,
+    payer: Address,
+    agent_id: u64,
+    brief_hash: BytesN<32>,
+    amount: i128,
+    deadline_ledger: u32,
+    token_id: Address,
+) -> Result<u64, Error> {
+    ensure_funding_active(env)?;
+    read_enabled_asset(env, &token_id)?;
+    let agent = read_agent(env, agent_id)?;
+    if !agent.active {
+        return Err(Error::AgentInactive);
+    }
+    if amount < agent.price || amount <= 0 {
+        return Err(Error::InvalidAmount);
+    }
+    if deadline_ledger <= env.ledger().sequence() {
+        return Err(Error::InvalidDeadline);
+    }
+
+    let escrow = env.current_contract_address();
+    token::Client::new(env, &token_id).transfer(&payer, MuxedAddress::from(&escrow), &amount);
+    let id = next_u64(env, DataKey::NextJobId)?;
+    let job = Job {
+        id,
+        agent_id,
+        payer,
+        agent_owner: agent.owner,
+        brief_hash,
+        deliverable_hash: BytesN::from_array(env, &[0; 32]),
+        amount,
+        deadline_ledger,
+        status: JobStatus::Funded,
+        rating: 0,
+        created_ledger: env.ledger().sequence(),
+        delivered_ledger: 0,
+        closed_ledger: 0,
+    };
+    env.storage().instance().set(&DataKey::Job(id), &job);
+    env.storage()
+        .instance()
+        .set(&DataKey::JobAsset(id), &token_id);
+    let mut ids = read_job_ids(env)?;
+    ids.push_back(id);
+    env.storage().instance().set(&DataKey::JobIds, &ids);
+    bump_ttl(env);
+    JobEvent {
+        action: symbol_short!("fund"),
+        job_id: id,
+    }
+    .publish(env);
+    Ok(id)
+}
+
+fn create_milestone_job_for_asset(
+    env: &Env,
+    payer: Address,
+    agent_id: u64,
+    brief_hash: BytesN<32>,
+    inputs: Vec<MilestoneInput>,
+    token_id: Address,
+) -> Result<u64, Error> {
+    ensure_funding_active(env)?;
+    read_enabled_asset(env, &token_id)?;
+    let agent = read_agent(env, agent_id)?;
+    if !agent.active {
+        return Err(Error::AgentInactive);
+    }
+    if inputs.len() < MIN_MILESTONES || inputs.len() > MAX_MILESTONES {
+        return Err(Error::InvalidMilestoneCount);
+    }
+
+    let current_ledger = env.ledger().sequence();
+    let mut total = 0i128;
+    let mut previous_deadline = current_ledger;
+    let mut milestones = Vec::<Milestone>::new(env);
+    for (index, input) in inputs.iter().enumerate() {
+        if input.amount <= 0 || input.deadline_ledger <= previous_deadline {
+            return Err(Error::InvalidMilestone);
+        }
+        total = total.checked_add(input.amount).ok_or(Error::Overflow)?;
+        previous_deadline = input.deadline_ledger;
+        milestones.push_back(Milestone {
+            index: index as u32,
+            brief_hash: input.brief_hash,
+            deliverable_hash: BytesN::from_array(env, &[0; 32]),
+            amount: input.amount,
+            deadline_ledger: input.deadline_ledger,
+            status: MilestoneStatus::Funded,
+            delivered_ledger: 0,
+            closed_ledger: 0,
+        });
+    }
+    if total < agent.price {
+        return Err(Error::InvalidAmount);
+    }
+
+    let escrow = env.current_contract_address();
+    token::Client::new(env, &token_id).transfer(&payer, MuxedAddress::from(&escrow), &total);
+    let id = next_u64(env, DataKey::NextJobId)?;
+    let job = Job {
+        id,
+        agent_id,
+        payer,
+        agent_owner: agent.owner,
+        brief_hash,
+        deliverable_hash: BytesN::from_array(env, &[0; 32]),
+        amount: total,
+        deadline_ledger: previous_deadline,
+        status: JobStatus::Funded,
+        rating: 0,
+        created_ledger: current_ledger,
+        delivered_ledger: 0,
+        closed_ledger: 0,
+    };
+    let plan = MilestonePlan {
+        job_id: id,
+        current_index: 0,
+        released_amount: 0,
+        milestones,
+    };
+    env.storage().instance().set(&DataKey::Job(id), &job);
+    env.storage()
+        .instance()
+        .set(&DataKey::JobAsset(id), &token_id);
+    env.storage()
+        .instance()
+        .set(&DataKey::MilestonePlan(id), &plan);
+    let mut job_ids = read_job_ids(env)?;
+    job_ids.push_back(id);
+    env.storage().instance().set(&DataKey::JobIds, &job_ids);
+    let mut milestone_ids = read_milestone_job_ids(env);
+    milestone_ids.push_back(id);
+    env.storage()
+        .instance()
+        .set(&DataKey::MilestoneJobIds, &milestone_ids);
+    bump_ttl(env);
+    JobEvent {
+        action: symbol_short!("staged"),
+        job_id: id,
+    }
+    .publish(env);
+    Ok(id)
+}
+
 fn validate_page(limit: u32) -> Result<(), Error> {
     if limit == 0 || limit > MAX_PAGE_SIZE {
         Err(Error::InvalidLimit)
@@ -969,6 +1284,62 @@ fn read_token(env: &Env) -> Result<Address, Error> {
         .instance()
         .get(&DataKey::Token)
         .ok_or(Error::NotInitialized)
+}
+
+fn require_admin(env: &Env, admin: &Address) -> Result<(), Error> {
+    ensure_initialized(env)?;
+    admin.require_auth();
+    if *admin != read_admin(env)? {
+        Err(Error::Unauthorized)
+    } else {
+        Ok(())
+    }
+}
+
+fn read_paused(env: &Env) -> bool {
+    env.storage()
+        .instance()
+        .get(&DataKey::Paused)
+        .unwrap_or(false)
+}
+
+fn ensure_funding_active(env: &Env) -> Result<(), Error> {
+    if read_paused(env) {
+        Err(Error::ProtocolPaused)
+    } else {
+        Ok(())
+    }
+}
+
+fn read_asset_ids(env: &Env) -> Vec<Address> {
+    env.storage()
+        .instance()
+        .get(&DataKey::AssetIds)
+        .unwrap_or(Vec::<Address>::new(env))
+}
+
+fn read_asset(env: &Env, token: &Address) -> Result<SettlementAsset, Error> {
+    env.storage()
+        .instance()
+        .get(&DataKey::Asset(token.clone()))
+        .ok_or(Error::AssetNotSupported)
+}
+
+fn read_enabled_asset(env: &Env, token: &Address) -> Result<SettlementAsset, Error> {
+    let asset = read_asset(env, token)?;
+    if asset.enabled {
+        Ok(asset)
+    } else {
+        Err(Error::AssetNotSupported)
+    }
+}
+
+fn read_job_token(env: &Env, job_id: u64) -> Result<Address, Error> {
+    Ok(env
+        .storage()
+        .instance()
+        .get(&DataKey::JobAsset(job_id))
+        .unwrap_or(read_token(env)?))
 }
 
 fn read_agent(env: &Env, id: u64) -> Result<Agent, Error> {

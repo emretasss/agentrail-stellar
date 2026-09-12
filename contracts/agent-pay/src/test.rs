@@ -372,3 +372,119 @@ fn rejects_invalid_milestone_plans_and_legacy_entrypoints() {
     );
     assert_eq!(f.client.list_milestone_plans().len(), 1);
 }
+
+#[test]
+fn routes_escrow_through_an_allowlisted_stellar_asset_contract() {
+    let f = fixture();
+    let agent_id = register_default_agent(&f);
+    let stable_asset = f.env.register_stellar_asset_contract_v2(f.admin.clone());
+    let stable_id = stable_asset.address();
+    let stable_admin = token::StellarAssetClient::new(&f.env, &stable_id);
+    let stable_token = token::Client::new(&f.env, &stable_id);
+    stable_admin.mint(&f.payer, &2_000_000);
+
+    let configured = f
+        .client
+        .configure_asset(&f.admin, &stable_id, &s(&f.env, "USDC"), &7, &true);
+    assert_eq!(configured.code, s(&f.env, "USDC"));
+    assert_eq!(f.client.list_assets().len(), 2);
+
+    let job_id = f.client.create_job_with_asset(
+        &f.payer,
+        &agent_id,
+        &hash(&f.env, 90),
+        &400_000,
+        &150,
+        &stable_id,
+    );
+    assert_eq!(stable_token.balance(&f.contract_id), 400_000);
+    assert_eq!(f.token.balance(&f.contract_id), 0);
+    assert_eq!(f.client.get_job_asset(&job_id).token, stable_id);
+
+    f.client
+        .deliver_job(&f.agent_owner, &job_id, &hash(&f.env, 91));
+    f.client.approve_job(&f.payer, &job_id, &5);
+    assert_eq!(stable_token.balance(&f.agent_owner), 400_000);
+    assert_eq!(stable_token.balance(&f.contract_id), 0);
+}
+
+#[test]
+fn rejects_disabled_or_unknown_settlement_assets() {
+    let f = fixture();
+    let agent_id = register_default_agent(&f);
+    let asset = f.env.register_stellar_asset_contract_v2(f.admin.clone());
+    let token_id = asset.address();
+    f.client
+        .configure_asset(&f.admin, &token_id, &s(&f.env, "PAUSED"), &7, &false);
+
+    assert_eq!(
+        f.client.try_create_job_with_asset(
+            &f.payer,
+            &agent_id,
+            &hash(&f.env, 92),
+            &250_000,
+            &150,
+            &token_id,
+        ),
+        Err(Ok(Error::AssetNotSupported))
+    );
+}
+
+#[test]
+fn emergency_pause_blocks_new_funding_but_preserves_safe_exit_paths() {
+    let f = fixture();
+    let agent_id = register_default_agent(&f);
+    let funded_job = f
+        .client
+        .create_job(&f.payer, &agent_id, &hash(&f.env, 93), &250_000, &150);
+
+    f.client.pause(&f.admin);
+    assert!(f.client.governance().paused);
+    assert_eq!(
+        f.client
+            .try_create_job(&f.payer, &agent_id, &hash(&f.env, 94), &250_000, &160),
+        Err(Ok(Error::ProtocolPaused))
+    );
+
+    f.client
+        .deliver_job(&f.agent_owner, &funded_job, &hash(&f.env, 95));
+    assert_eq!(
+        f.client.approve_job(&f.payer, &funded_job, &5).status,
+        JobStatus::Released
+    );
+
+    f.client.resume(&f.admin);
+    assert!(!f.client.governance().paused);
+    assert_eq!(
+        f.client
+            .create_job(&f.payer, &agent_id, &hash(&f.env, 96), &250_000, &170),
+        2
+    );
+}
+
+#[test]
+fn enforces_a_visible_timelock_before_contract_upgrades() {
+    let f = fixture();
+    let wasm_hash = hash(&f.env, 97);
+    assert_eq!(
+        f.client.try_propose_upgrade(&f.admin, &wasm_hash, &17_379),
+        Err(Ok(Error::InvalidUpgradeDelay))
+    );
+
+    let proposal = f.client.propose_upgrade(&f.admin, &wasm_hash, &17_380);
+    let governance = f.client.governance();
+    assert!(governance.upgrade_pending);
+    assert_eq!(governance.upgrade_wasm_hash, wasm_hash);
+    assert_eq!(proposal.execute_after_ledger, 17_380);
+    assert_eq!(
+        f.client.try_execute_upgrade(&f.admin),
+        Err(Ok(Error::UpgradeNotReady))
+    );
+
+    f.client.cancel_upgrade(&f.admin);
+    assert!(!f.client.governance().upgrade_pending);
+    assert_eq!(
+        f.client.try_cancel_upgrade(&f.admin),
+        Err(Ok(Error::UpgradeNotFound))
+    );
+}

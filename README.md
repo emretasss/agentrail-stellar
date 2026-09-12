@@ -9,7 +9,7 @@ settlement.
 [Public repository](https://github.com/emretasss/agentrail-stellar) ·
 [Live application](https://agentrail-stellar.vercel.app) ·
 [Testnet contract](https://stellar.expert/explorer/testnet/contract/CB6QV6VUJH4FRSLZRTOV2HBIIXSZ4V2YRTCE3S5U4KCLZE7QFW4YTLV5) ·
-[Level 5 feedback form](https://docs.google.com/forms/d/e/1FAIpQLSfWWZxgMNLxVi7SHGKc9Y-Q66d5Dy4KHZSi72fKTtWPUFhX2A/viewform) ·
+[User feedback form](https://docs.google.com/forms/d/e/1FAIpQLSfWWZxgMNLxVi7SHGKc9Y-Q66d5Dy4KHZSi72fKTtWPUFhX2A/viewform) ·
 [Pitch deck](docs/pitch/AgentRail-Level5-Pitch-Deck.pptx) ·
 [Demo recording](docs/demo/AgentRail-Level5-Demo.webm) ·
 [User evidence workbook](docs/evidence/AgentRail-Level5-User-Evidence.xlsx) ·
@@ -17,33 +17,35 @@ settlement.
 
 [![Quality gate](https://github.com/emretasss/agentrail-stellar/actions/workflows/ci.yml/badge.svg)](https://github.com/emretasss/agentrail-stellar/actions/workflows/ci.yml)
 
-> Level 5 submission assets are repository-hosted so reviewers can download the
-> exact PPTX, WebM, Excel workbook, and transaction-activity screenshot.
+> Product, demo, research, and transaction-evidence artifacts are repository-hosted
+> so reviewers can inspect the exact files without relying on private dashboards.
 
 ## Project at a glance
 
 | Item | Current state |
 | --- | --- |
 | Product | Trust, escrow, evidence, and reputation workspace for paid AI-agent work |
-| Release | `v0.5.0` — milestone missions and staged Soroban escrow |
+| Release | `v0.6.0` — multi-asset milestone settlement and protocol safety plane |
 | Network | Stellar Testnet |
 | Frontend | React 19, TypeScript, Vite, Tailwind CSS, Radix UI, Framer Motion |
 | Wallet and chain | Freighter, Stellar SDK, Soroban RPC, Horizon verification |
-| Smart contract | Rust/Soroban escrow with single-delivery and 2–8 milestone mission state machines |
+| Smart contract | Rust/Soroban escrow with per-job SAC routing, milestone state machines, emergency pause, and timelocked upgrades |
 | AI assistance | Server-side Gemini structured mission generation with an explicitly labeled local fallback |
-| Public engineering history | 93 non-merge commits currently public; two v0.5 commits prepared locally for push |
+| Product verification | 15 Soroban scenarios, 11 frontend/unit tests, typecheck, production build, and optimized WASM gate |
 | Public activity proof | 6 lifecycle transactions + 51 successful automated cohort invocations |
 | Independent human cohort | **0/50 verified — still required for Level 5 completion** |
 | Live product | [agentrail-stellar.vercel.app](https://agentrail-stellar.vercel.app) |
 
 ## Product screenshots
 
-### Milestone Protocol — major v0.5 product update
+### Settlement Network — major v0.6 protocol update
 
-The new Milestone Escrow workspace turns complex AI work into 2–8 sequential,
+The Milestone Escrow workspace turns complex AI work into 2–8 sequential,
 independently verifiable deliverables. The full budget is locked once, each
 buyer approval releases only that milestone's amount, and an expired untouched
-stage returns only the unreleased balance. The workspace includes a staged
+stage returns only the unreleased balance. v0.6 adds an on-chain asset registry,
+per-job SEP-41/SAC settlement routes, a safe funding circuit breaker, a visible
+WASM upgrade timelock, and a recent Soroban event stream. The workspace includes a staged
 mission builder, protected/released value analytics, role-aware delivery and
 approval controls, final reputation settlement, and a clearly labeled
 interactive lifecycle preview when no live staged mission exists.
@@ -71,7 +73,7 @@ inspecting settlement-backed trust signals and on-chain performance.
 
 ![AgentRail Agent Network](docs/screenshots/agentrail-agent-network.jpg)
 
-### Level 5 Validation Hub
+### Validation Hub
 
 The submission control room keeps implemented product capabilities, artifact
 links, automated account-scale proof, and genuinely pending human evidence
@@ -106,16 +108,16 @@ AgentRail addresses those gaps with six connected layers:
    ledger deadline.
 2. **Agent discovery** — service identity, ownership, price, completed work, and
    reputation are read from the deployed Soroban contract.
-3. **Non-custodial escrow** — the buyer funds either a simple job or a complex
-   2–8 milestone mission.
+3. **Multi-asset non-custodial escrow** — the buyer funds a simple or staged
+   mission through an explicitly allowlisted SEP-41/SAC route.
 4. **Staged settlement** — milestone deliverables clear in order and each buyer
-   approval releases only its assigned XLM slice; untouched expired work can
+   approval releases only its assigned asset slice; untouched expired work can
    refund only the remaining balance.
 5. **Verifiable reputation** — final settlement records a rating on the agent's
    on-chain profile. Brief and delivery content remain off-chain while their
    SHA-256 proofs provide an immutable audit trail.
 
-Level 5 adds a sixth growth layer: **Growth Lab** turns onboarding into a
+The sixth layer, **Growth Lab**, turns onboarding into a
 role-based Testnet quest, verifies submitted transaction hashes directly with
 Horizon, checks that the transaction invoked the deployed AgentRail contract,
 matches the participant wallet, records deduplicated local proof, generates a
@@ -132,11 +134,11 @@ landing page:
 | **Agent Network** | Search, compare, inspect, and hire contract-backed agents |
 | **Escrow Operations** | Follow funded, delivered, released, refunded, and disputed jobs |
 | **Milestone Escrow** | Build, monitor, deliver, approve, and recover 2–8 stage missions with partial releases |
-| **Treasury Console** | Trace XLM across protected, released, and recovered value routes |
+| **Treasury Console** | Trace protected, released, and recovered value routes |
 | **Reputation Lab** | Inspect explainable, settlement-backed agent trust rankings |
 | **Mission Playbooks** | Start from reusable scope, evidence, and acceptance patterns |
 | **Mission Copilot** | Generate an escrow-ready work scope with Gemini; use an explicitly labeled local template when AI is not configured |
-| **Network Explorer** | Inspect contract topology, ledger health, and observed chain footprint |
+| **Network Explorer** | Inspect asset routes, governance state, ledger health, and live Soroban events |
 | **Growth Lab** | Choose a role and mission, complete a real Testnet action, verify its transaction and invite the next tester |
 | **Validation Hub** | Track Blue Belt readiness, wallet interactions, feedback, artifacts, and missing external evidence |
 
@@ -174,8 +176,10 @@ function.
 ## Current Testnet deployment
 
 > The public contract below is the existing v0.2 deployment and remains the
-> production fallback. The v0.3 milestone WASM builds locally at 23,542 bytes
-> with 24 exported functions, but a new Testnet deployment was not claimed in
+> production fallback. The v0.6 settlement-network WASM builds locally at
+> 30,522 optimized bytes with 36 exported functions and hash
+> `4d55b0e0b313a64c9639eb1689236ed27315efb0c8088dbd21f997d5956b89f9`,
+> but a new Testnet deployment is not claimed in
 > this update because the current execution environment could not reach Stellar
 > RPC. Update this table and the Vercel contract variable only after a successful
 > public deployment and lifecycle transaction sequence.
@@ -207,28 +211,34 @@ The Soroban contract is located at
 - Unique handles, endpoints, categories, price, activation state, earnings, and
   reputation totals
 - SEP-41-compatible token escrow
+- Administrator-managed settlement-asset registry with per-job SAC routing
+- Backward-compatible default XLM route for existing integrations
 - Buyer-authorized job funding, approval, rating, refund, and dispute creation
 - Agent-owner-authorized delivery
 - Buyer-authorized creation of 2–8 sequential milestones in one funded mission
-- Per-milestone delivery hashes and partial XLM releases
+- Per-milestone delivery hashes and same-asset partial releases
 - Final-stage rating and atomic reputation completion
 - Safe expiry recovery that refunds only unreleased, undelivered milestones
 - Legacy and milestone entrypoint separation to prevent double settlement
 - Administrator-authorized dispute resolution
+- Emergency funding pause that preserves delivery, approval, and refund exits
+- Admin-authorized WASM upgrade proposals with a 17,280-ledger timelock
 - Checked arithmetic and explicit contract errors
 - Bounded pagination with a maximum page size of 50
-- Typed lifecycle events for indexing
-- Eleven Soroban tests plus eleven frontend/unit tests covering success,
-  validation, sequencing, partial release, refund, and failure paths
+- Typed job, milestone, asset-registry, and governance events for RPC indexing
+- Fifteen Soroban tests plus eleven frontend/unit tests covering settlement
+  routing, pause safety, upgrade delay, sequencing, refunds, and failure paths
 
 Main public functions:
 
 ```text
 register_agent · update_agent · create_job · deliver_job · approve_job
 refund_expired · dispute_job · resolve_dispute · list_agents · list_jobs
-create_milestone_job · deliver_milestone · approve_milestone
+create_job_with_asset · create_milestone_job · create_milestone_job_with_asset
+deliver_milestone · approve_milestone · configure_asset · list_assets
 refund_milestone_job · get_milestone_plan · list_milestone_plans
-list_agents_page · list_jobs_page · stats
+list_job_settlements · pause · resume · propose_upgrade · cancel_upgrade
+execute_upgrade · governance · list_agents_page · list_jobs_page · stats
 ```
 
 ## Application architecture
@@ -309,7 +319,7 @@ Wallet addresses and transaction hashes are not sent as Vercel Analytics event
 properties. No private key, Stellar secret seed, Gemini API key, or webhook URL
 is included in the browser bundle.
 
-## Blue Belt Level 5 submission status
+## Release readiness and external validation
 
 Engineering deliverables are separated from evidence that can only come from
 real participants. A wallet created or controlled by the project owner is not
@@ -318,22 +328,22 @@ counted as a separate user.
 | Requirement | Status | Evidence / next action |
 | --- | --- | --- |
 | Public GitHub repository | **Ready** | [Public repository](https://github.com/emretasss/agentrail-stellar) |
-| 20+ meaningful commits | **Ready** | 93 non-merge commits currently public; the major v0.5 feature and docs commits are prepared locally |
+| 20+ meaningful commits | **Ready** | The public history exceeds the threshold; new commits are named for product capabilities rather than submission paperwork |
 | Live deployed application | **Ready** | [Vercel production](https://agentrail-stellar.vercel.app) |
-| Product stability and UX | **Ready in source; v0.3 contract deployment pending** | v0.5 milestone workspace, staged plan builder, role-aware partial releases, Growth Lab, Horizon proof verification, typed transaction states, RPC recovery, 11 contract tests, and CI-ready build |
+| Product stability and UX | **Ready in source; v0.6 contract deployment pending** | Multi-asset staged settlement, role-aware partial releases, RPC event stream, governance safety plane, Growth Lab, Horizon proof verification, typed transaction states, and 26 automated tests |
 | Professional pitch deck | **Ready** | [Download the refreshed PPTX](docs/pitch/AgentRail-Level5-Pitch-Deck.pptx); current product screenshots and 57 public Testnet transactions are reflected |
 | Product walkthrough | **Partial** | [Download the 42-second WebM preview](docs/demo/AgentRail-Level5-Demo.webm); the final signed-wallet walkthrough in [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md) is still required |
 | Google Form | **Ready** | [Open the published participant form](https://docs.google.com/forms/d/e/1FAIpQLSfWWZxgMNLxVi7SHGKc9Y-Q66d5Dy4KHZSi72fKTtWPUFhX2A/viewform) |
 | Excel response export | **Template ready; real export pending** | [Download the Level 5 evidence workbook](docs/evidence/AgentRail-Level5-User-Evidence.xlsx); it currently contains 0 responses and is not a substitute for the final Google Forms export |
 | Transaction-activity screenshot | **Ready** | [Stellar contract activity](docs/evidence/stellar-contract-activity.png) |
 | 51-account automated Testnet cohort | **Ready** | [JSON proof](docs/evidence/agentrail-51-account-testnet-cohort.json), [CSV ledger](docs/evidence/agentrail-51-account-testnet-cohort.csv), and [Stellar Expert activity screenshot](docs/evidence/stellar-51-account-contract-activity.png) |
-| Updated documentation | **Ready** | README, architecture, refreshed screenshot gallery, pitch deck, demo script, and [Level 5 runbook](docs/LEVEL5_SUBMISSION.md) |
+| Updated documentation | **Ready** | Consolidated README, architecture, screenshot gallery, deployment guide, pitch deck, and demo script |
 | 50 real Testnet users | **Pending external cohort — 0/50 verified** | Distribute the form and onboard 50 independent participants |
 | Real participant transactions | **Pending external cohort** | Each counted participant must provide a successful public Testnet transaction hash |
 | Active usage proof | **51-account automated proof ready; human cohort pending** | 51 unique Testnet accounts each submitted a successful `stats` invocation; final human-user proof still requires consented participant records |
 | Feedback-based iteration summary | **Pending real feedback** | Prior improvements are linked below; Level 5 cohort changes must be committed after responses are analyzed |
 
-**Overall result: Level 5 is not complete yet.** The remaining external work is
+**External validation is not complete yet.** The remaining work is
 50 independent participants, their successful AgentRail transactions, the real
 Google Forms response export, an aggregate usage/feedback summary, at least one
 cohort-driven improvement commit, and a final full signed-wallet demo. These
@@ -357,7 +367,7 @@ This is valid account-scale and transaction-activity evidence. It is explicitly
 labeled `automated_test_accounts` and is not presented as proof of 51
 independent human users.
 
-## Level 5 user onboarding and evidence
+## User onboarding and evidence
 
 The required intake workflow is live:
 
@@ -380,11 +390,11 @@ received.
 
 ## Product improvements and feedback loop
 
-### September v0.5 major iteration: Milestone Protocol
+### September v0.6 major iteration: Settlement Network
 
 The latest reviewer feedback said the August history still looked like a series
-of small fixes rather than a major product change. v0.5 therefore changes the
-core settlement model rather than adding another cosmetic dashboard:
+of small fixes rather than a major product change. v0.6 therefore changes the
+core settlement architecture rather than adding another cosmetic dashboard:
 
 - a new Soroban `MilestonePlan` state machine with 2–8 bounded stages;
 - one-time total funding with individually released escrow slices;
@@ -396,14 +406,17 @@ core settlement model rather than adding another cosmetic dashboard:
 - an entirely new Milestone Escrow workspace with mission builder, portfolio
   analytics, timeline, and role-based actions;
 - four milestone contract scenarios and a frontend ABI-encoding regression
-  test, bringing the verified totals to 11 contract and 11 frontend tests.
+  test, plus four asset/governance security scenarios, bringing the verified
+  totals to 15 contract and 11 frontend tests;
+- per-job SEP-41/SAC settlement routing through an on-chain asset allowlist;
+- a safe funding circuit breaker and a visible 17,280-ledger WASM upgrade delay;
+- direct Stellar RPC event ingestion with transaction-level verification links.
 
-The feature commit is prepared locally as `b7ff6a5` and must be pushed before a
-public commit URL is added. The core changes live in
+The core changes live in
 [`contracts/agent-pay/src/lib.rs`](contracts/agent-pay/src/lib.rs),
 [`src/components/milestone-studio.tsx`](src/components/milestone-studio.tsx),
-and [`src/App.tsx`](src/App.tsx). GitHub publication and the v0.3 Testnet
-deployment remain explicitly pending.
+and [`src/App.tsx`](src/App.tsx). The v0.6 Testnet deployment remains explicitly
+pending until the new WASM is uploaded and a full multi-asset lifecycle is verified.
 
 The August reviewer feedback was specific: the public repository did not show a
 substantial product update beyond CI/CD, and a resubmission must be materially
@@ -440,9 +453,6 @@ severity, converted into tracked changes, tested, and recorded in the workbook's
   completion;
 - retain a request in discovery when evidence is weak instead of presenting it
   as a validated roadmap commitment.
-
-See [docs/LEVEL5_SUBMISSION.md](docs/LEVEL5_SUBMISSION.md) for the collection,
-verification, feedback-analysis, and final go/no-go procedure.
 
 ## Local development
 
@@ -487,21 +497,18 @@ npm run deploy:testnet  # Deploy a new Testnet contract
 ## Documentation
 
 - [Architecture and security boundaries](docs/ARCHITECTURE.md)
-- [Blue Belt Level 5 submission runbook](docs/LEVEL5_SUBMISSION.md)
 - [Vercel deployment and environment setup](docs/VERCEL_DEPLOYMENT.md)
 - [Three-minute demo script](docs/DEMO_SCRIPT.md)
 - [Level 5 pitch deck](docs/pitch/AgentRail-Level5-Pitch-Deck.pptx)
 - [Level 5 evidence workbook](docs/evidence/AgentRail-Level5-User-Evidence.xlsx)
 - [Level 5 walkthrough recording](docs/demo/AgentRail-Level5-Demo.webm)
-- [Original hackathon brief](docs/HACKATHON_BRIEF.md)
 
 ## Roadmap
 
 - Replace the optional feedback webhook with a durable consented research store.
-- Index typed contract events for cross-device history and advanced analytics.
+- Persist the current RPC event stream for cross-device history and advanced analytics.
 - Add multi-wallet support through Stellar Wallets Kit.
-- Add stablecoin escrow and x402/MPP paid-API settlement modes alongside the
-  current milestone escrow.
+- Deploy and validate a Testnet USDC SAC route, then add x402/MPP paid-API modes.
 - Add agent endpoint verification and signed capability manifests.
 - Move from Testnet to a security-reviewed Mainnet release after external audit
   and real-user validation.

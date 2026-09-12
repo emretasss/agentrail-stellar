@@ -64,9 +64,12 @@ import {
 import type {
   ActivityEvent,
   Agent,
+  ContractEvent,
   Job,
   MilestonePlan,
+  ProtocolGovernance,
   RegisterForm,
+  SettlementAsset,
   TransactionStage,
 } from "@/types/agentrail";
 import { workspaceViews, type AppView } from "@/config/workspace-navigation";
@@ -95,6 +98,21 @@ function App() {
   const [milestonePlans, setMilestonePlans] = useState<MilestonePlan[]>(
     stellarConfig.demoMode ? sampleMilestonePlans : [],
   );
+  const [settlementAssets, setSettlementAssets] = useState<SettlementAsset[]>([
+    {
+      token: stellarConfig.nativeTokenContractId,
+      code: "XLM",
+      decimals: 7,
+      enabled: true,
+    },
+  ]);
+  const [governance, setGovernance] = useState<ProtocolGovernance>({
+    paused: false,
+    version: 3,
+    minUpgradeDelayLedgers: 0,
+    upgradePending: false,
+  });
+  const [contractEvents, setContractEvents] = useState<ContractEvent[]>([]);
   const [activity, setActivity] = useState<ActivityEvent[]>(initialActivity);
   const [selectedAgentId, setSelectedAgentId] = useState(
     stellarConfig.demoMode ? sampleAgents[0].id : 0,
@@ -181,6 +199,9 @@ function App() {
       setAgents(snapshot.agents);
       setJobs(snapshot.jobs);
       setMilestonePlans(snapshot.milestonePlans);
+      setSettlementAssets(snapshot.settlementAssets);
+      setGovernance(snapshot.governance);
+      setContractEvents(snapshot.contractEvents);
       setLatestLedger(snapshot.ledger);
       setDataMode("live");
       setSelectedAgentId((current) => {
@@ -451,7 +472,11 @@ function App() {
     try {
       const signer = requireWallet();
       const agent = agents.find(({ id }) => id === mission.agentId);
+      const settlementAsset = settlementAssets.find(
+        ({ token, enabled }) => token === mission.assetToken && enabled,
+      );
       if (!agent) throw new Error("Choose a verified agent.");
+      if (!settlementAsset) throw new Error("Choose an enabled settlement asset.");
       if (!agent.chainBacked) {
         throw new Error("Preview agents cannot receive real staged escrow.");
       }
@@ -498,14 +523,19 @@ function App() {
         );
       }
       const briefHash = await sha256Hex(mission.brief.trim());
+      const usesDefaultAsset =
+        settlementAsset.token === stellarConfig.nativeTokenContractId;
       const result = await submitAgentRailCall(
         signer.address,
-        "create_milestone_job",
+        usesDefaultAsset
+          ? "create_milestone_job"
+          : "create_milestone_job_with_asset",
         [
           scVal.address(signer.address),
           scVal.u64(agent.id),
           scVal.bytes32(briefHash),
           scVal.milestoneInputs(preparedMilestones),
+          ...(!usesDefaultAsset ? [scVal.address(settlementAsset.token)] : []),
         ],
         setTransactionStage,
       );
@@ -527,6 +557,8 @@ function App() {
         createdLedger: currentLedger,
         deadlineLedger: preparedMilestones.at(-1)?.deadlineLedger,
         chainBacked: true,
+        assetCode: settlementAsset.code,
+        assetContract: settlementAsset.token,
       };
       const plan: MilestonePlan = {
         jobId: id,
@@ -546,7 +578,7 @@ function App() {
       recordWalletTransaction(signer.address, result.hash, "create_milestone_job");
       pushActivity(
         "Staged escrow funded",
-        `${mission.milestones.length} milestones · ${decimalFromStroops(total)} XLM protected.`,
+        `${mission.milestones.length} milestones · ${decimalFromStroops(total)} ${settlementAsset.code} protected.`,
         "success",
         result.hash,
       );
@@ -1099,6 +1131,7 @@ function App() {
                 plans={
                   milestonePlans.length ? milestonePlans : sampleMilestonePlans
                 }
+                assets={settlementAssets}
                 walletAddress={wallet?.address}
                 latestLedger={latestLedger}
                 busy={busy}
@@ -1123,6 +1156,9 @@ function App() {
                 mode={dataMode}
                 ledger={latestLedger}
                 jobs={jobs}
+                assets={settlementAssets}
+                governance={governance}
+                events={contractEvents}
                 onRefresh={() => void refreshProtocol()}
               />
             )}
@@ -1151,7 +1187,7 @@ function App() {
         <footer
           className="mt-8 flex flex-col gap-3 border-t border-white/[.055] py-5 text-[10px] text-slate-700 sm:flex-row sm:items-center sm:justify-between"
         >
-          <span>AgentRail v0.5 · Milestone Protocol · Stellar Testnet · Non-custodial escrow</span>
+          <span>AgentRail v0.6 · Multi-asset Settlement Network · Stellar Testnet · Non-custodial escrow</span>
           <Button variant="ghost" size="sm" onClick={() => setFeedbackOpen(true)}>
             <MessageSquareText size={13} />
             Share feedback

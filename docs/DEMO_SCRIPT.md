@@ -64,7 +64,7 @@ transaction hash, and show Horizon verifying transaction success, the wallet,
 the AgentRail contract invocation, function name, and ledger. Copy the referral
 link and open the participant feedback form.
 
-## 2:50–3:00 — Level 5 growth evidence
+## 2:50–3:00 — Growth evidence
 
 Open Validation Hub. Show 50 verified wallet interactions, the published Google
 Form, feedback totals, the Excel evidence dashboard, and the exported response
@@ -85,7 +85,7 @@ on:
 - The final interaction links open successfully in an incognito browser.
 - Growth Lab accepts a real AgentRail hash and rejects a non-contract Testnet hash.
 - No participant email address or secret wallet material is visible.
-- The video URL is added to README and `docs/LEVEL5_SUBMISSION.md`.
+- The final video URL is added to README.
 
 The repository includes a concise visual walkthrough at
 [`docs/demo/AgentRail-Level5-Demo.webm`](demo/AgentRail-Level5-Demo.webm). It

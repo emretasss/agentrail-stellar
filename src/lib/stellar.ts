@@ -9,12 +9,15 @@ import {
 import type { TransactionStage } from "@/types/agentrail";
 import type {
   Agent,
+  ContractEvent,
   Job,
   JobStatus,
   MilestoneDraft,
   MilestonePlan,
   MilestoneStatus,
   ProtocolSnapshot,
+  ProtocolGovernance,
+  SettlementAsset,
 } from "@/types/agentrail";
 
 const TESTNET_PASSPHRASE = "Test SDF Network ; September 2015";
@@ -422,6 +425,27 @@ type NativeMilestonePlan = {
   milestones: NativeMilestone[];
 };
 
+type NativeSettlementAsset = {
+  token: unknown;
+  code: string;
+  decimals: number;
+  enabled: boolean;
+};
+
+type NativeJobSettlement = {
+  job_id: bigint | number;
+  token: unknown;
+};
+
+type NativeGovernance = {
+  paused: boolean;
+  version: number;
+  min_upgrade_delay_ledgers: number;
+  upgrade_pending: boolean;
+  upgrade_wasm_hash: unknown;
+  upgrade_execute_after_ledger: number;
+};
+
 const JOB_STATUS: JobStatus[] = [
   "Funded",
   "Delivered",
@@ -484,13 +508,98 @@ async function readAgentRailCall<T>(
   return StellarSdk.scValToNative(simulation.result.retval) as T;
 }
 
+function eventValueLabel(value: unknown): string {
+  if (typeof value === "bigint") return value.toString();
+  if (typeof value === "string" || typeof value === "number") return String(value);
+  try {
+    return JSON.stringify(value, (_, item) =>
+      typeof item === "bigint" ? item.toString() : item,
+    );
+  } catch {
+    return "Contract state transition";
+  }
+}
+
+export async function loadContractEvents(
+  latestLedger: number,
+): Promise<ContractEvent[]> {
+  const server = new StellarSdk.rpc.Server(stellarConfig.rpcUrl);
+  const response = await server.getEvents({
+    startLedger: Math.max(1, latestLedger - 17_280),
+    filters: [{ type: "contract", contractIds: [stellarConfig.contractId] }],
+    limit: 50,
+  });
+
+  const observed = new Set<string>();
+  return response.events
+    .filter((event) => {
+      if (observed.has(event.id)) return false;
+      observed.add(event.id);
+      return true;
+    })
+    .map((event) => {
+      const topics = event.topic.map((topic) =>
+        eventValueLabel(StellarSdk.scValToNative(topic)),
+      );
+      return {
+        id: event.id,
+        family: topics[0] ?? "contract",
+        action: topics[1] ?? "event",
+        ledger: event.ledger,
+        ledgerClosedAt: event.ledgerClosedAt,
+        txHash: event.txHash,
+        detail: eventValueLabel(StellarSdk.scValToNative(event.value)),
+      };
+    })
+    .reverse();
+}
+
 export async function loadProtocolSnapshot(): Promise<ProtocolSnapshot> {
-  const [nativeAgents, nativeJobs, nativeMilestonePlans, ledger] = await Promise.all([
+  const [
+    nativeAgents,
+    nativeJobs,
+    nativeMilestonePlans,
+    nativeAssets,
+    nativeSettlements,
+    nativeGovernance,
+    ledger,
+  ] = await Promise.all([
     readAgentRailCall<NativeAgent[]>("list_agents"),
     readAgentRailCall<NativeJob[]>("list_jobs"),
     readAgentRailCall<NativeMilestonePlan[]>("list_milestone_plans").catch(() => []),
+    readAgentRailCall<NativeSettlementAsset[]>("list_assets").catch(() => [
+      {
+        token: stellarConfig.nativeTokenContractId,
+        code: "XLM",
+        decimals: 7,
+        enabled: true,
+      },
+    ]),
+    readAgentRailCall<NativeJobSettlement[]>("list_job_settlements").catch(() => []),
+    readAgentRailCall<NativeGovernance>("governance").catch(() => ({
+      paused: false,
+      version: 3,
+      min_upgrade_delay_ledgers: 0,
+      upgrade_pending: false,
+      upgrade_wasm_hash: new Uint8Array(32),
+      upgrade_execute_after_ledger: 0,
+    })),
     getLatestLedgerSequence(),
   ]);
+
+  const settlementAssets: SettlementAsset[] = nativeAssets.map((asset) => ({
+    token: addressToString(asset.token),
+    code: asset.code,
+    decimals: Number(asset.decimals),
+    enabled: asset.enabled,
+  }));
+  const assetByToken = new Map(settlementAssets.map((asset) => [asset.token, asset]));
+  const tokenByJob = new Map(
+    nativeSettlements.map((settlement) => [
+      Number(settlement.job_id),
+      addressToString(settlement.token),
+    ]),
+  );
 
   const agents: Agent[] = nativeAgents.map((agent) => {
     const ratingCount = Number(agent.rating_count);
@@ -516,6 +625,8 @@ export async function loadProtocolSnapshot(): Promise<ProtocolSnapshot> {
   const jobs: Job[] = nativeJobs.map((job) => {
     const briefHash = bytesToHex(job.brief_hash);
     const status = JOB_STATUS[Number(job.status)] ?? "Disputed";
+    const assetContract =
+      tokenByJob.get(Number(job.id)) ?? settlementAssets[0]?.token;
     return {
       id: Number(job.id),
       agentId: Number(job.agent_id),
@@ -533,6 +644,8 @@ export async function loadProtocolSnapshot(): Promise<ProtocolSnapshot> {
       deliveredLedger: Number(job.delivered_ledger),
       closedLedger: Number(job.closed_ledger),
       chainBacked: true,
+      assetCode: assetByToken.get(assetContract ?? "")?.code ?? "XLM",
+      assetContract,
     };
   });
 
@@ -553,10 +666,27 @@ export async function loadProtocolSnapshot(): Promise<ProtocolSnapshot> {
     })),
   }));
 
+  const governance: ProtocolGovernance = {
+    paused: nativeGovernance.paused,
+    version: Number(nativeGovernance.version),
+    minUpgradeDelayLedgers: Number(nativeGovernance.min_upgrade_delay_ledgers),
+    upgradePending: nativeGovernance.upgrade_pending,
+    upgradeWasmHash: nativeGovernance.upgrade_pending
+      ? bytesToHex(nativeGovernance.upgrade_wasm_hash)
+      : undefined,
+    upgradeExecuteAfterLedger: nativeGovernance.upgrade_pending
+      ? Number(nativeGovernance.upgrade_execute_after_ledger)
+      : undefined,
+  };
+  const contractEvents = await loadContractEvents(ledger).catch(() => []);
+
   return {
     agents,
     jobs,
     milestonePlans,
+    settlementAssets,
+    governance,
+    contractEvents,
     ledger,
     loadedAt: new Date().toISOString(),
   };

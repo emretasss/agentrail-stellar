@@ -23,18 +23,26 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { decimalFromStroops } from "@/lib/stellar";
-import type { Agent, Job, MilestoneDraft, MilestonePlan } from "@/types/agentrail";
+import type {
+  Agent,
+  Job,
+  MilestoneDraft,
+  MilestonePlan,
+  SettlementAsset,
+} from "@/types/agentrail";
 
 type CreateMilestoneMission = {
   agentId: number;
   brief: string;
   milestones: MilestoneDraft[];
+  assetToken: string;
 };
 
 type MilestoneStudioProps = {
   agents: Agent[];
   jobs: Job[];
   plans: MilestonePlan[];
+  assets: SettlementAsset[];
   walletAddress?: string;
   latestLedger: number | null;
   busy: string | null;
@@ -66,6 +74,7 @@ export function MilestoneStudio({
   agents,
   jobs,
   plans,
+  assets,
   walletAddress,
   latestLedger,
   busy,
@@ -78,6 +87,9 @@ export function MilestoneStudio({
   const [selectedPlanId, setSelectedPlanId] = useState(plans[0]?.jobId ?? 0);
   const [agentId, setAgentId] = useState(agents[0]?.id ?? 0);
   const [brief, setBrief] = useState("");
+  const [assetToken, setAssetToken] = useState(
+    assets.find((asset) => asset.enabled && asset.decimals === 7)?.token ?? "",
+  );
   const [drafts, setDrafts] = useState<MilestoneDraft[]>(initialDrafts);
   const [proof, setProof] = useState("");
   const [rating, setRating] = useState(5);
@@ -85,11 +97,6 @@ export function MilestoneStudio({
   const selectedPlan = plans.find(({ jobId }) => jobId === selectedPlanId) ?? plans[0];
   const selectedJob = jobs.find(({ id }) => id === selectedPlan?.jobId);
   const currentMilestone = selectedPlan?.milestones[selectedPlan.currentIndex];
-  const totalProtected = plans.reduce(
-    (sum, plan) => sum + plan.milestones.reduce((inner, item) => inner + item.amountStroops, 0n),
-    0n,
-  );
-  const totalReleased = plans.reduce((sum, plan) => sum + plan.releasedAmountStroops, 0n);
   const completedMilestones = plans.reduce(
     (sum, plan) => sum + plan.milestones.filter(({ status }) => status === "Released").length,
     0,
@@ -99,6 +106,7 @@ export function MilestoneStudio({
     ? Math.round((selectedPlan.currentIndex / selectedPlan.milestones.length) * 100)
     : 0;
   const selectedAgent = agents.find(({ id }) => id === agentId);
+  const selectedAsset = assets.find(({ token }) => token === assetToken) ?? assets[0];
   const draftTotal = useMemo(
     () => drafts.reduce((sum, item) => sum + (Number(item.amount) || 0), 0),
     [drafts],
@@ -113,7 +121,7 @@ export function MilestoneStudio({
   async function submitMission(event: FormEvent) {
     event.preventDefault();
     try {
-      await onCreate({ agentId, brief, milestones: drafts });
+      await onCreate({ agentId, brief, milestones: drafts, assetToken });
       setMode("portfolio");
       setBrief("");
       setDrafts(initialDrafts);
@@ -141,7 +149,7 @@ export function MilestoneStudio({
         <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[.18em] text-cyan-300">
-              <Layers3 size={13} /> Major protocol upgrade · v0.3
+              <Layers3 size={13} /> Multi-asset milestone protocol · v0.6
             </div>
             <h2 className="mt-3 max-w-3xl text-3xl font-semibold tracking-[-.05em] text-white sm:text-4xl">
               Ship complex agent work without releasing the whole budget at once.
@@ -171,8 +179,8 @@ export function MilestoneStudio({
         <>
           <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             {[
-              [WalletCards, "Protected value", `${decimalFromStroops(totalProtected)} XLM`, "Funded across staged missions"],
-              [CircleDollarSign, "Released", `${decimalFromStroops(totalReleased)} XLM`, "Paid only after approval"],
+              [WalletCards, "Protected routes", `${plans.length} missions`, "SAC-backed settlement vaults"],
+              [CircleDollarSign, "Settlement assets", `${assets.filter(({ enabled }) => enabled).length} enabled`, "Allowlisted SEP-41 interfaces"],
               [CheckCircle2, "Milestones cleared", `${completedMilestones}/${milestoneCount}`, "Settlement-backed progress"],
               [ShieldCheck, "Active plans", String(plans.length), "Sequential execution enforced"],
             ].map(([Icon, label, value, detail]) => (
@@ -221,7 +229,7 @@ export function MilestoneStudio({
                       </div>
                       <p className="mt-2 line-clamp-2 text-[11px] leading-5 text-slate-500">{job?.brief ?? "Private on-chain mission brief"}</p>
                       <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-white/[.05]"><div className="h-full rounded-full bg-gradient-to-r from-[#746cff] to-[#78e8ff]" style={{ width: `${planProgress}%` }} /></div>
-                      <div className="mt-2 flex justify-between text-[9px] text-slate-600"><span>{plan.currentIndex}/{plan.milestones.length} released</span><span>{decimalFromStroops(plan.milestones.reduce((sum, item) => sum + item.amountStroops, 0n))} XLM</span></div>
+                      <div className="mt-2 flex justify-between text-[9px] text-slate-600"><span>{plan.currentIndex}/{plan.milestones.length} released</span><span>{decimalFromStroops(plan.milestones.reduce((sum, item) => sum + item.amountStroops, 0n))} {job?.assetCode ?? "XLM"}</span></div>
                     </button>
                   );
                 })}
@@ -250,7 +258,7 @@ export function MilestoneStudio({
                             <div className="min-w-0 flex-1">
                               <div className="flex flex-wrap items-center justify-between gap-2">
                                 <strong className="text-xs text-slate-200">Milestone {index + 1}</strong>
-                                <div className="flex items-center gap-2"><Badge className={statusTone(milestone.status)}>{milestone.status}</Badge><span className="text-xs font-semibold text-white">{decimalFromStroops(milestone.amountStroops)} XLM</span></div>
+                                <div className="flex items-center gap-2"><Badge className={statusTone(milestone.status)}>{milestone.status}</Badge><span className="text-xs font-semibold text-white">{decimalFromStroops(milestone.amountStroops)} {selectedJob.assetCode ?? "XLM"}</span></div>
                               </div>
                               <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[9px] text-slate-600"><span className="flex items-center gap-1"><Clock3 size={10} /> Ledger {milestone.deadlineLedger.toLocaleString()}</span><span className="flex items-center gap-1"><FileKey2 size={10} /> {milestone.briefHash.slice(0, 12)}…</span></div>
                             </div>
@@ -269,7 +277,7 @@ export function MilestoneStudio({
                           <div className="flex flex-col gap-2 sm:flex-row"><Input value={proof} onChange={(event) => setProof(event.target.value)} placeholder="Delivery URL, CID, or result summary" /><Button disabled={!proof.trim() || Boolean(busy)} onClick={() => void onDeliver(selectedPlan, proof).catch(() => undefined)}><Send size={13} /> Record proof</Button></div>
                         )}
                         {currentMilestone.status === "Delivered" && isPayer && (
-                          <div className="flex flex-col gap-2 sm:flex-row sm:items-center"><p className="mr-auto text-xs text-cyan-200">Evidence recorded. Approve to release this slice.</p>{finalMilestone && <select aria-label="Final mission rating" value={rating} onChange={(event) => setRating(Number(event.target.value))} className="h-10 rounded-lg border border-white/10 bg-slate-950 px-3 text-xs text-white">{[5,4,3,2,1].map((score) => <option key={score} value={score}>{score} stars</option>)}</select>}<Button disabled={Boolean(busy)} onClick={() => void onApprove(selectedPlan, finalMilestone ? rating : 0).catch(() => undefined)}><CheckCircle2 size={13} /> Approve {decimalFromStroops(currentMilestone.amountStroops)} XLM</Button></div>
+                          <div className="flex flex-col gap-2 sm:flex-row sm:items-center"><p className="mr-auto text-xs text-cyan-200">Evidence recorded. Approve to release this slice.</p>{finalMilestone && <select aria-label="Final mission rating" value={rating} onChange={(event) => setRating(Number(event.target.value))} className="h-10 rounded-lg border border-white/10 bg-slate-950 px-3 text-xs text-white">{[5,4,3,2,1].map((score) => <option key={score} value={score}>{score} stars</option>)}</select>}<Button disabled={Boolean(busy)} onClick={() => void onApprove(selectedPlan, finalMilestone ? rating : 0).catch(() => undefined)}><CheckCircle2 size={13} /> Approve {decimalFromStroops(currentMilestone.amountStroops)} {selectedJob.assetCode ?? "XLM"}</Button></div>
                         )}
                         {deadlinePassed && isPayer && currentMilestone.status === "Funded" && (
                           <Button variant="outline" disabled={Boolean(busy)} onClick={() => void onRefund(selectedPlan).catch(() => undefined)}><RotateCcw size={13} /> Refund remaining escrow</Button>
@@ -295,11 +303,15 @@ export function MilestoneStudio({
               <option value={0}>Choose an agent</option>
               {agents.map((agent) => <option key={agent.id} value={agent.id}>@{agent.handle} · {decimalFromStroops(agent.priceStroops)} XLM min</option>)}
             </select>
+            <label className="mt-4 block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Settlement asset</label>
+            <select value={assetToken} onChange={(event) => setAssetToken(event.target.value)} className="mt-2 h-11 w-full rounded-lg border border-white/10 bg-slate-950 px-3 text-sm text-white outline-none">
+              {assets.filter((asset) => asset.enabled && asset.decimals === 7).map((asset) => <option key={asset.token} value={asset.token}>{asset.code} · SEP-41 / SAC route</option>)}
+            </select>
             <label className="mt-4 block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Mission brief</label>
             <Textarea value={brief} onChange={(event) => setBrief(event.target.value)} className="mt-2 min-h-32" placeholder="Describe the outcome, constraints, approved sources, and acceptance policy…" />
             <div className="mt-5 rounded-xl border border-white/[.06] bg-black/20 p-4 text-[10px] text-slate-500">
-              <div className="flex justify-between"><span>Total staged budget</span><strong className="text-white">{draftTotal.toFixed(7).replace(/0+$/, "").replace(/\.$/, "")} XLM</strong></div>
-              <div className="mt-2 flex justify-between"><span>Agent minimum</span><strong className="text-white">{selectedAgent ? decimalFromStroops(selectedAgent.priceStroops) : "—"} XLM</strong></div>
+              <div className="flex justify-between"><span>Total staged budget</span><strong className="text-white">{draftTotal.toFixed(7).replace(/0+$/, "").replace(/\.$/, "")} {selectedAsset?.code ?? "asset"}</strong></div>
+              <div className="mt-2 flex justify-between"><span>Agent minimum</span><strong className="text-white">{selectedAgent ? decimalFromStroops(selectedAgent.priceStroops) : "—"} {selectedAsset?.code ?? "asset"}</strong></div>
             </div>
           </aside>
 
@@ -310,7 +322,7 @@ export function MilestoneStudio({
                 <div key={index} className="grid gap-3 rounded-xl border border-white/[.065] bg-white/[.018] p-4 lg:grid-cols-[auto_1fr_8rem_9rem_auto] lg:items-end">
                   <span className="grid size-8 place-items-center rounded-full border border-[#746cff]/25 bg-[#746cff]/10 text-xs font-semibold text-[#c1bdff]">{index + 1}</span>
                   <label className="text-[9px] font-semibold uppercase tracking-wider text-slate-600">Deliverable<Input required value={draft.title} onChange={(event) => updateDraft(index, "title", event.target.value)} className="mt-2" /></label>
-                  <label className="text-[9px] font-semibold uppercase tracking-wider text-slate-600">Amount XLM<Input required inputMode="decimal" value={draft.amount} onChange={(event) => updateDraft(index, "amount", event.target.value)} className="mt-2" /></label>
+                  <label className="text-[9px] font-semibold uppercase tracking-wider text-slate-600">Amount {selectedAsset?.code ?? "asset"}<Input required inputMode="decimal" value={draft.amount} onChange={(event) => updateDraft(index, "amount", event.target.value)} className="mt-2" /></label>
                   <label className="text-[9px] font-semibold uppercase tracking-wider text-slate-600">Deadline offset<Input required inputMode="numeric" value={draft.ledgerOffset} onChange={(event) => updateDraft(index, "ledgerOffset", event.target.value)} className="mt-2" /></label>
                   <button type="button" disabled={drafts.length <= 2} onClick={() => setDrafts((current) => current.filter((_, cursor) => cursor !== index))} className="grid size-9 place-items-center rounded-lg border border-white/[.07] text-slate-600 transition hover:border-red-400/20 hover:text-red-300 disabled:opacity-25" aria-label={`Remove milestone ${index + 1}`}><Trash2 size={13} /></button>
                 </div>

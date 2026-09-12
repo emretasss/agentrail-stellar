@@ -40,6 +40,8 @@ export type Job = {
   deliveredLedger?: number;
   closedLedger?: number;
   chainBacked: boolean;
+  assetCode?: string;
+  assetContract?: string;
 };
 
 export type MilestoneStatus = "Funded" | "Delivered" | "Released" | "Refunded";
@@ -69,10 +71,39 @@ export type MilestoneDraft = {
   ledgerOffset: string;
 };
 
+export type SettlementAsset = {
+  token: string;
+  code: string;
+  decimals: number;
+  enabled: boolean;
+};
+
+export type ProtocolGovernance = {
+  paused: boolean;
+  version: number;
+  minUpgradeDelayLedgers: number;
+  upgradePending: boolean;
+  upgradeWasmHash?: string;
+  upgradeExecuteAfterLedger?: number;
+};
+
+export type ContractEvent = {
+  id: string;
+  family: string;
+  action: string;
+  ledger: number;
+  ledgerClosedAt: string;
+  txHash: string;
+  detail: string;
+};
+
 export type ProtocolSnapshot = {
   agents: Agent[];
   jobs: Job[];
   milestonePlans: MilestonePlan[];
+  settlementAssets: SettlementAsset[];
+  governance: ProtocolGovernance;
+  contractEvents: ContractEvent[];
   ledger: number;
   loadedAt: string;
 };
